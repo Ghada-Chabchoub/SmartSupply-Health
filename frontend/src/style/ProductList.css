@@ -81,38 +81,6 @@
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
 }
 
-/* Section de recommandations */
-.recommendations-section {
-  margin-bottom: 24px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #eef5ff 0%, #ffffff 100%);
-  border-radius: var(--radius);
-  border: 1px solid var(--gray-200);
-  box-shadow: var(--shadow-md);
-}
-
-.recommendations-section h2 {
-  margin: 0 0 16px 0;
-  font-size: 1.2em;
-  font-weight: 700;
-  color: var(--primary-blue-dark);
-  text-align: center;
-  padding-bottom: 8px;
-  position: relative;
-}
-
-.recommendations-section h2::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 2px;
-  background: var(--primary-blue);
-  border-radius: 1px;
-}
-
 /* Grille de produits */
 .products-grid {
   display: grid;
@@ -136,26 +104,7 @@
   overflow: hidden;
 }
 
-/* Cartes dans la section recommandations */
-.recommendations-section .product-card {
-  padding: 20px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.25s ease;
-}
-
-/* Effets hover uniformes */
-.product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary-blue);
-}
-
-.recommendations-section .product-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-}
-
-/* Barre colorée au hover */
+/* Barre colorée au hover - BLEU UNI */
 .product-card::before {
   content: '';
   position: absolute;
@@ -163,7 +112,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--primary-blue), #8b5cf6, #ec4899);
+  background: linear-gradient(90deg, var(--primary-blue), var(--primary-blue-dark));
   opacity: 0;
   transition: var(--transition-slow);
 }
@@ -172,9 +121,10 @@
   opacity: 1;
 }
 
-.recommendations-section .product-card:hover::before {
-  opacity: 1;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary-blue);
 }
 
 /* Container d'image */
@@ -249,7 +199,7 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-fill-color: transparent;
-  color: var(--primary-blue); /* Fallback */
+  color: var(--primary-blue);
 }
 
 .product-stock {
@@ -579,9 +529,12 @@
   transition: var(--transition);
 }
 
+/* ====== SECTION RECOMMANDATIONS ====== */
 .recommendations-carousel-section {
   padding: 24px 20px;
-  background: linear-gradient(135deg, #e0f2ff 0%, #f0f8ff 100%);
+  background:
+    radial-gradient(circle at 25% 40%, rgba(83, 143, 240, 0.22), transparent 70%),
+    #a2c0d7 !important;
   border-bottom: 1px solid var(--gray-200);
   border-top: 1px solid var(--gray-200);
   margin-bottom: 20px;
@@ -616,16 +569,31 @@
 .recommendation-card:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow-xl);
-  border-color: var(--primary-blue);
+  border-color: var(--primary-blue) !important;
 }
 
+/* Badge catégorie BLEU */
+.rec-category-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark)) !important;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+/* Prix */
 .rec-price {
   font-weight: 700;
-  color: var(--primary-blue);
+  color: var(--primary-blue) !important;
 }
 
+
+/* Bouton "Ajouter" BLEU */
 .rec-add-btn {
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%) !important;
   color: white;
   border: none;
   padding: 10px 15px;
@@ -653,13 +621,14 @@
   background: var(--gray-200);
   color: var(--gray-800);
 }
-  
+
 .action-button.out-of-stock {  
   background-color: #dc3545;  
   color: white;  
   cursor: not-allowed;  
-} 
-  
+}
+
+/* Select catégorie */
 .category-select {  
   padding: 10px 15px;  
   border: 1px solid #ddd;  
@@ -674,7 +643,17 @@
   outline: none;  
   border-color: #007bff;  
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);  
-} 
-  
+}
 
- 
+/* === OVERRIDES: supprimer tout dégradé sur les prix === */
+.product-price,
+.rec-price,
+.product-card .product-price,
+.recommendation-card .rec-price {
+  background: none !important;                 /* retire tout gradient de fond */
+  -webkit-background-clip: border-box !important; /* annule le clip du texte */
+  background-clip: border-box !important;
+  -webkit-text-fill-color: var(--primary-blue) !important; /* remet une couleur unie */
+  color: var(--primary-blue) !important;
+  text-fill-color: initial !important;          /* reset spec non-standard s'il existe */
+}

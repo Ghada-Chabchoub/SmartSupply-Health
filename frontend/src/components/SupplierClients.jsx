@@ -20,16 +20,11 @@ const SupplierClients = () => {
                 }
             });
 
-            const responseText = await response.text();
-            let result;
-            try {
-                result = JSON.parse(responseText);
-            } catch (jsonError) {
-                setError(`Erreur serveur: Réponse non-JSON reçue (statut ${response.status})`);
-                alert(`Erreur serveur: Réponse non-JSON reçue (statut ${response.status})`);
-                console.error('Réponse non-JSON:', responseText);
-                return;
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
+
+            const result = await response.json();
 
             if (result.success) {
                 const clientMap = new Map();
@@ -58,11 +53,9 @@ const SupplierClients = () => {
                 setClients(Array.from(clientMap.values()));
             } else {
                 setError(result.message || 'Erreur lors du chargement des clients');
-                alert(result.message || 'Erreur lors du chargement des clients');
             }
         } catch (err) {
-            setError('Erreur de connexion au serveur');
-            alert('Erreur de connexion au serveur');
+            setError('Erreur de connexion au serveur. Veuillez réessayer.');
             console.error('Erreur:', err);
         } finally {
             setLoading(false);
@@ -76,13 +69,14 @@ const SupplierClients = () => {
     const formatPrice = (price) => {
         return new Intl.NumberFormat('fr-FR', {
             style: 'currency',
-            currency: 'EUR'
+            currency: 'TND' // Changed to TND for consistency
         }).format(price);
     };
 
     if (loading) {
         return (
             <div className="clients-container">
+                <SupplierNavbar />
                 <div className="loading-spinner">
                     <div className="spinner"></div>
                     <p>Chargement des clients...</p>
@@ -106,11 +100,11 @@ const SupplierClients = () => {
                 </div>
             )}
 
-            {clients.length === 0 ? (
+            {!error && clients.length === 0 ? (
                 <div className="no-clients">
                     <div className="no-clients-icon">👥</div>
                     <h3>Aucun client trouvé</h3>
-                    <p>Aucun client n'a passé de commande avec vos produits.</p>
+                    <p>Aucun client n'a encore passé de commande.</p>
                 </div>
             ) : (
                 <div className="clients-table-container">
@@ -119,9 +113,7 @@ const SupplierClients = () => {
                             <tr>
                                 <th>Nom</th>
                                 <th>Clinique</th>
-                                <th>Type de clinique</th>
                                 <th>Email</th>
-                                <th>Téléphone</th>
                                 <th>Commandes</th>
                                 <th>Total Dépensé</th>
                             </tr>
@@ -129,13 +121,11 @@ const SupplierClients = () => {
                         <tbody>
                             {clients.map((client) => (
                                 <tr key={client._id}>
-                                    <td>{client.name || 'N/A'}</td>
-                                    <td>{client.clinicName || 'N/A'}</td>
-                                    <td>{client.clinicType || 'N/A'}</td>
-                                    <td>{client.email || 'N/A'}</td>
-                                    <td>{client.phone || 'N/A'}</td>
-                                    <td>{client.orderCount}</td>
-                                    <td>{formatPrice(client.totalSpent)}</td>
+                                    <td data-label="Nom">{client.name || 'N/A'}</td>
+                                    <td data-label="Clinique">{client.clinicName || 'N/A'}</td>
+                                    <td data-label="Email">{client.email || 'N/A'}</td>
+                                    <td data-label="Commandes">{client.orderCount}</td>
+                                    <td data-label="Total Dépensé">{formatPrice(client.totalSpent)}</td>
                                 </tr>
                             ))}
                         </tbody>

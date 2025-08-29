@@ -1,336 +1,195 @@
-/* Styles pour le carrousel de recommandations */
-.recommendations-carousel-section {
-  margin: 24px 20px;
-  padding: 32px;
-  background: linear-gradient(135deg, #0f0c29 0%, #24243e 50%, #404040 100%);
-  border-radius: 24px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+/* ==========================================================================
+   Supplier Clients Page Styling
+   ========================================================================== */
+
+/* Variables */
+:root {
+    --primary-font: 'Inter', sans-serif;
+    --primary-bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --primary-text: #212529;
+    --secondary-text: #6c757d;
+    --border-color: #dee2e6;
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --border-radius: 8px;
 }
 
-.recommendations-carousel-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
-  pointer-events: none;
+/* Main container */
+.clients-container {
+    font-family: var(--primary-font);
+    background-color: var(--primary-bg);
+    padding: 2rem;
+    min-height: 100vh;
 }
 
-.recommendations-header {
-  text-align: center;
-  margin-bottom: 32px;
-  position: relative;
-  z-index: 2;
+/* Header */
+.clients-header {
+    margin-bottom: 2rem;
+    text-align: center;
 }
 
-.recommendations-header h2 {
-  color: white;
-  font-size: 2.2em;
-  font-weight: 800;
-  margin-bottom: 8px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+.clients-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-text);
+    margin-bottom: 0.5rem;
 }
 
-.recommendations-header p {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1.1em;
-  font-weight: 300;
-  margin: 0;
+.clients-header p {
+    font-size: 1.1rem;
+    color: var(--secondary-text);
 }
 
-.recommendations-carousel {
-  position: relative;
+/* Loading Spinner */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 50vh;
 }
 
-.carousel-container {
-  overflow-x: auto;
-  padding: 16px 0 32px 0;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: var(--primary-color);
+    animation: spin 1s ease infinite;
 }
 
-.carousel-container::-webkit-scrollbar {
-  display: none;
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
-.carousel-track {
-  display: flex;
-  gap: 24px;
-  padding: 0 16px;
-  width: max-content;
+.loading-spinner p {
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: var(--secondary-text);
 }
 
-.recommendation-card {
-  width: 280px;
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 
-    0 10px 30px rgba(0, 0, 0, 0.2),
-    0 1px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(20px);
-  animation: slideInUp 0.6s ease-out forwards;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  border: 2px solid transparent;
+/* Error Message */
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border: 1px solid #f5c6cb;
+    border-radius: var(--border-radius);
+    text-align: center;
+    margin-bottom: 2rem;
 }
 
-.recommendation-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 
-    0 20px 50px rgba(0, 0, 0, 0.25),
-    0 5px 20px rgba(139, 92, 246, 0.3);
-  border-color: #8b5cf6;
+.error-message button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-@keyframes slideInUp {
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.error-message button:hover {
+    background-color: var(--primary-hover);
 }
 
-.rec-card-badge {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-  color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  z-index: 3;
-  box-shadow: 0 4px 12px rgba(238, 90, 36, 0.4);
+/* No Clients Message */
+.no-clients {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: var(--shadow);
 }
 
-.rec-image-container {
-  position: relative;
-  height: 200px;
-  background: linear-gradient(135deg, #f1f3f4 0%, #e8eaf0 100%);
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.no-clients-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
 }
 
-.rec-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
+.no-clients h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-text);
+    margin-bottom: 0.5rem;
 }
 
-.rec-image-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48px;
-  opacity: 0.6;
-  height: 100%;
+.no-clients p {
+    color: var(--secondary-text);
 }
 
-.rec-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
-  opacity: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.3s ease;
+/* Table Styling */
+.clients-table-container {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
 }
 
-.recommendation-card:hover .rec-overlay {
-  opacity: 1;
+.clients-table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.recommendation-card:hover .rec-image {
-  transform: scale(1.1);
+.clients-table th,
+.clients-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.quick-view-btn {
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
-  padding: 10px 20px;
-  border-radius: 25px;
-  font-weight: 600;
-  cursor: pointer;
-  transform: translateY(10px);
-  transition: all 0.3s ease;
+.clients-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: var(--secondary-text);
+    text-transform: uppercase;
+    font-size: 0.85rem;
 }
 
-.recommendation-card:hover .quick-view-btn {
-  transform: translateY(0);
+.clients-table tbody tr:hover {
+    background-color: #f1f3f5;
 }
 
-.rec-content {
-  padding: 24px;
-}
-
-.rec-category-tag {
-  display: inline-block;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
-}
-
-.rec-title {
-  font-size: 1.3em;
-  font-weight: 700;
-  color: #1a202c;
-  margin: 0 0 8px 0;
-  line-height: 1.3;
-}
-
-.rec-description {
-  color: #4a5568;
-  font-size: 14px;
-  line-height: 1.5;
-  margin: 0 0 16px 0;
-  min-height: 42px;
-}
-
-.rec-info {
-  margin-bottom: 20px;
-}
-
-.rec-price-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.rec-price {
-  font-size: 1.4em;
-  font-weight: 800;
-  color: #2d3748;
-  background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.rec-stock {
-  font-size: 12px;
-  color: #718096;
-  background: #f7fafc;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.rec-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.rec-add-btn, .rec-details-btn {
-  flex: 1;
-  padding: 12px 16px;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: none;
-}
-
-.rec-add-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
-
-.rec-add-btn:hover:not(.disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-}
-
-.rec-add-btn.disabled {
-  background: #e2e8f0;
-  color: #a0aec0;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.rec-details-btn {
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
-}
-
-.rec-details-btn:hover {
-  background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
-  border-color: #cbd5e0;
-  transform: translateY(-1px);
-}
-
-.carousel-indicators {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 24px;
-}
-
-.indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.indicator:hover {
-  background: rgba(255, 255, 255, 0.8);
-  transform: scale(1.2);
-}
-
-/* Responsive */
+/* Responsive Design */
 @media (max-width: 768px) {
-  .recommendations-carousel-section {
-    margin: 16px 10px;
-    padding: 20px;
-  }
-  
-  .recommendations-header h2 {
-    font-size: 1.8em;
-  }
-  
-  .recommendation-card {
-    width: 260px;
-  }
-  
-  .carousel-track {
-    gap: 16px;
-    padding: 0 8px;
-  }
-}
+    .clients-table thead {
+        display: none;
+    }
 
-/* Animation pour l'état de chargement */
-.recommendations-carousel-section h2:has-text("Chargement") {
-  color: rgba(255, 255, 255, 0.8);
-  animation: pulse 2s infinite;
-}
+    .clients-table,
+    .clients-table tbody,
+    .clients-table tr,
+    .clients-table td {
+        display: block;
+        width: 100%;
+    }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
+    .clients-table tr {
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+    }
+
+    .clients-table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+    }
+
+    .clients-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 50%;
+        padding-left: 1rem;
+        font-weight: 600;
+        text-align: left;
+    }
 }
