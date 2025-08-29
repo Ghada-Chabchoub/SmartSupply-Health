@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import StockAdjustModal from './StockAdjustModal';
 import axios from 'axios';
 import '../style/ProductList.css';
 import CompetitorModal from './CompetitorModal';
 import PriceSimulationModal from './PriceSimulationModal';
+import { FaEdit, FaBoxOpen, FaTrash, FaSearch, FaChartLine, FaBalanceScale } from 'react-icons/fa';
 
 export default function ProductList({ onEdit, reload }) {
   const [products, setProducts] = useState([]);
@@ -17,6 +18,9 @@ export default function ProductList({ onEdit, reload }) {
   const [offers, setOffers] = useState([]);
   const [showSimulationModal, setShowSimulationModal] = useState(false);
   const [simulationData, setSimulationData] = useState(null);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const dropdownRef = useRef(null);
+
   // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
@@ -28,7 +32,6 @@ export default function ProductList({ onEdit, reload }) {
         const res = await axios.get('http://localhost:5000/api/products/categories', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        console.log('Fetched categories:', res.data); // Debug log
         setCategories(res.data);
       } catch (err) {
         console.error('Error fetching categories:', err.response?.data?.message || err.message);
@@ -44,12 +47,10 @@ export default function ProductList({ onEdit, reload }) {
       if (!token) {
         throw new Error('No authentication token found');
       }
-      console.log('Fetching products with params:', { q, category, page, limit: 10 }); // Debug log
       const res = await axios.get('http://localhost:5000/api/products', {
         params: { q, category: category || undefined, page, limit: 10 },
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('Fetched products:', res.data); // Debug log
       setProducts(res.data.data || []);
       setPages(res.data.pages || 1);
     } catch (err) {
@@ -62,13 +63,25 @@ export default function ProductList({ onEdit, reload }) {
     fetchProducts();
   }, [fetchProducts, reload]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdownId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleSearchChange = e => {
     setQ(e.target.value);
     setPage(1);
   };
 
   const handleCategoryChange = e => {
-    console.log('Selected category:', e.target.value); // Debug log
     setCategory(e.target.value);
     setPage(1);
   };
@@ -89,37 +102,38 @@ export default function ProductList({ onEdit, reload }) {
       alert(`Erreur suppression produit: ${err.response?.data?.message || 'Vérifiez votre connexion ou authentification'}`);
     }
   };
- const analyzeCompetitors = async (productId) => {
-try {
-const token = localStorage.getItem('token');
-const res = await axios.post(`http://localhost:5000/api/scrape/${productId}`, {}, {
-headers: { Authorization: `Bearer ${token}` }
-});
-setOffers(res.data.offers || []);
-setShowCompetitorModal(true);
-} catch (err) {
-console.error('Erreur analyse concurrence:', err.message);
-alert('Erreur lors de l’analyse concurrentielle.');
-}
-};
 
+  const analyzeCompetitors = async (productId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(`http://localhost:5000/api/scrape/${productId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOffers(res.data.offers || []);
+      setShowCompetitorModal(true);
+    } catch (err) {
+      console.error('Erreur analyse concurrence:', err.message);
+      alert('Erreur lors de l’analyse concurrentielle.');
+    }
+  };
 
-const simulatePrice = async (productId) => {
-try {
-const token = localStorage.getItem('token');
-const res = await axios.get(`http://localhost:5000/api/simulate/${productId}`, {
-headers: { Authorization: `Bearer ${token}` }
-});
-setSimulationData(res.data);
-setShowSimulationModal(true);
-} catch (err) {
-console.error('Erreur simulation:', err.message);
-alert('Erreur lors de la simulation du prix.');
-}
-};
+  const simulatePrice = async (productId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:5000/api/simulate/${productId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSimulationData(res.data);
+      setShowSimulationModal(true);
+    } catch (err) {
+      console.error('Erreur simulation:', err.message);
+      alert('Erreur lors de la simulation du prix.');
+    }
+  };
 
-
-
+  const toggleDropdown = (productId) => {
+    setOpenDropdownId(openDropdownId === productId ? null : productId);
+  };
 
   return (
     <div className="product-list-container">
@@ -141,7 +155,7 @@ alert('Erreur lors de la simulation du prix.');
           ))}
         </select>
         <button onClick={() => fetchProducts()} className="search-button">
-          Rechercher
+          <FaSearch /> Rechercher
         </button>
       </div>
 
@@ -177,26 +191,48 @@ alert('Erreur lors de la simulation du prix.');
             </div>
 
             <div className="product-actions">
-              <button
-                onClick={() => onEdit(p)}
-                className="action-button edit"
-              >
-                Éditer
-              </button>
-              <button
-                onClick={() => setSelectedProduct(p)}
-                className="action-button stock"
-              >
-                Stock
-              </button>
-              <button
-                onClick={() => remove(p._id)}
-                className="action-button delete"
-              >
-                Supprimer
-              </button>
-              <button onClick={() => analyzeCompetitors(p._id)} className="action-button info">🔍 Analyse</button>
-              <button onClick={() => simulatePrice(p._id)} className="action-button info">📈 Simuler</button>
+              <div className="actions-dropdown" ref={openDropdownId === p._id ? dropdownRef : null}>
+                <button
+                  onClick={() => toggleDropdown(p._id)}
+                  className="actions-toggle-button"
+                >
+                  Actions
+                </button>
+                {openDropdownId === p._id && (
+                  <div className="dropdown-menu show">
+                    <button
+                      onClick={() => { onEdit(p); setOpenDropdownId(null); }}
+                      className="dropdown-item edit"
+                    >
+                      <FaEdit /> Éditer
+                    </button>
+                    <button
+                      onClick={() => { setSelectedProduct(p); setOpenDropdownId(null); }}
+                      className="dropdown-item stock"
+                    >
+                      <FaBoxOpen /> Ajuster Stock
+                    </button>
+                    <button
+                      onClick={() => { analyzeCompetitors(p._id); setOpenDropdownId(null); }}
+                      className="dropdown-item"
+                    >
+                      <FaBalanceScale /> Analyse Concurrence
+                    </button>
+                    <button
+                      onClick={() => { simulatePrice(p._id); setOpenDropdownId(null); }}
+                      className="dropdown-item"
+                    >
+                      <FaChartLine /> Simuler Prix
+                    </button>
+                    <button
+                      onClick={() => { remove(p._id); setOpenDropdownId(null); }}
+                      className="dropdown-item delete"
+                    >
+                      <FaTrash /> Supprimer
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -230,16 +266,16 @@ alert('Erreur lors de la simulation du prix.');
         }}
       />
       <CompetitorModal
-      open={showCompetitorModal}
-      onClose={() => setShowCompetitorModal(false)}
-      offers={offers}
-    />
+        open={showCompetitorModal}
+        onClose={() => setShowCompetitorModal(false)}
+        offers={offers}
+      />
 
-    <PriceSimulationModal
-      open={showSimulationModal}
-      onClose={() => setShowSimulationModal(false)}
-      data={simulationData}
-    />
+      <PriceSimulationModal
+        open={showSimulationModal}
+        onClose={() => setShowSimulationModal(false)}
+        data={simulationData}
+      />
     </div>
   );
 }

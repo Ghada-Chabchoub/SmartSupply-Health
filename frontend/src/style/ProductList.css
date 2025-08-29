@@ -62,7 +62,26 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.dropdown-item {
+  display: flex; /* Utiliser flexbox pour l'alignement */
+  align-items: center; /* Centrer verticalement */
+  gap: 10px; /* Espace entre l'icône et le texte */
+  width: 100%;
+  padding: 12px 18px;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--gray-700);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
 .search-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 12px 20px;
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
   color: white;
@@ -101,7 +120,7 @@
   background: white;
   transition: var(--transition-slow);
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* CHANGEMENT ICI: Permet au dropdown de déborder */
 }
 
 /* Barre colorée au hover - BLEU UNI */
@@ -220,51 +239,85 @@
 .product-actions {
   margin-top: 12px;
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-end; /* Aligner le bouton à droite */
 }
 
-.action-button {
-  flex: 1;
-  padding: 8px 6px;
-  cursor: pointer;
+.actions-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.actions-toggle-button {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  padding: 10px 16px;
+  border: 1px solid var(--gray-300);
   border-radius: var(--radius-sm);
-  border: none;
-  font-size: 12px;
+  cursor: pointer;
   font-weight: 600;
   transition: var(--transition);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 14px;
 }
 
-.action-button.edit {
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
-  color: white;
+.actions-toggle-button:hover {
+  background: var(--gray-200);
+  border-color: var(--gray-400);
 }
 
-.action-button.edit:hover {
-  background: linear-gradient(135deg, var(--primary-blue-dark) 0%, var(--primary-blue) 100%);
-  transform: translateY(-1px);
+.dropdown-menu {
+  display: none; /* Caché par défaut */
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 5px); /* CHANGEMENT: Positionné au-dessus du bouton */
+  background-color: white;
+  min-width: 180px;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-sm);
+  z-index: 100;
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  padding: 8px 0;
 }
 
-.action-button.stock {
-  background: linear-gradient(135deg, #10b981 0%, var(--success-green) 100%);
-  color: white;
+/* Classe à ajouter en JS pour afficher le menu */
+.dropdown-menu.show {
+  display: block;
+  animation: fadeIn 0.1s ease-out;
 }
 
-.action-button.stock:hover {
-  background: linear-gradient(135deg, var(--success-green) 0%, #0f9e6e 100%);
-  transform: translateY(-1px);
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 12px 18px;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--gray-700);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.action-button.delete {
-  background: linear-gradient(135deg, #ef4444 0%, var(--danger-red) 100%);
-  color: white;
+.dropdown-item:hover {
+  background-color: var(--gray-100);
+  color: var(--gray-900);
 }
 
-.action-button.delete:hover {
-  background: linear-gradient(135deg, var(--danger-red) 0%, #c81e1e 100%);
-  transform: translateY(-1px);
+/* Couleurs spécifiques pour la sémantique */
+.dropdown-item.edit:hover {
+  background-color: var(--primary-blue-light);
+  color: var(--primary-blue-dark);
+}
+
+.dropdown-item.stock:hover {
+  background-color: #d1fae5; /* Vert clair */
+  color: #047857;
+}
+
+.dropdown-item.delete:hover {
+  background-color: #fee2e2; /* Rouge clair */
+  color: #b91c1c;
 }
 
 /* Pagination */
@@ -294,8 +347,9 @@
 }
 
 .pagination-button:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
+  background-color: var(--gray-100);
 }
 
 .pagination-button.prev {

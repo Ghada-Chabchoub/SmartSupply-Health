@@ -1,8 +1,9 @@
-import React, { useState } from 'react'; 
+import React, { useState } from 'react';
 import ProductList from '../components/ProductList';
 import ProductForm from '../components/ProductForm';
 import SupplierNavbar from '../components/dashboard/SupplierNavbar';
-
+import { FaPlus } from 'react-icons/fa';
+import '../style/ProductsPage.css'; // Importer le nouveau CSS
 
 export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState(null);
@@ -30,13 +31,14 @@ export default function ProductsPage() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="products-page-container">
       <SupplierNavbar />
-      <h1>Catalogue & Stock — Fournisseur</h1>
-
-      <button onClick={openAddForm} style={{ marginBottom: 20, padding: '8px 16px' }}>
-        + Ajouter un produit
-      </button>
+      <div className="products-page-header">
+        <h1>Catalogue & Stock — Fournisseur</h1>
+        <button onClick={openAddForm} className="add-product-button">
+          <FaPlus /> Ajouter un produit
+        </button>
+      </div>
 
       <ProductList onEdit={openEditForm} reload={reload} />
 

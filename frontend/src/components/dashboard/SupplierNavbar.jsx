@@ -17,7 +17,6 @@ const SupplierNavbar = () => {
     { name: 'Gérer Catalogue', path: '/supplier-dashboard/catalogue' },
     { name: 'Commandes Reçues', path: '/supplier/orders' },
     { name: 'Mes Clients', path: '/supplier/client' },
-    { name: 'Rapports & Stats', path: '/supplier-dashboard/stats' },
   ];
 
   return (

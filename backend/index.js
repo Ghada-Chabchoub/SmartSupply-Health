@@ -15,6 +15,7 @@ const recommendationRoutes = require('./routes/recommendations');
 const scrapingRoutes = require('./routes/scraping');
 const clientInventoryRoutes = require('./routes/clientInventory');
 const paymentRoutes = require('./routes/payment');
+const supplierRoutes = require('./routes/supplier');
 
 // Error handler (doit être APRES les routes)
 const errorHandler = require('./middleware/errorHandler');
@@ -46,6 +47,7 @@ app.use('/api', scrapingRoutes);
 // Inventaire client (GET /api/client-inventory, etc.)
 app.use('/api/client-inventory', clientInventoryRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/supplier', supplierRoutes);
 
 /* ------------------------ 4) HEALTHCHECK ----------------------------- */
 app.get('/api/health', (req, res) => {

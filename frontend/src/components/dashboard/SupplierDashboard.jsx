@@ -1,12 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import SupplierNavbar from './SupplierNavbar';
 
 const SupplierDashboard = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    activeClients: 0,
+    totalOrders: 0,
+    productsInStock: 0,
+    monthlyRevenue: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${API_URL}/api/supplier/stats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setStats(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [token]);
 
   return (
     <div className="dashboard-container">
@@ -35,7 +68,7 @@ const SupplierDashboard = () => {
                   </div>
                   <div className="stat-card-info">
                     <p className="stat-card-label">Clients actifs</p>
-                    <p className="stat-card-value">0</p>
+                    <p className="stat-card-value">{loading ? '...' : stats.activeClients}</p>
                   </div>
                 </div>
               </div>
@@ -49,7 +82,7 @@ const SupplierDashboard = () => {
                   </div>
                   <div className="stat-card-info">
                     <p className="stat-card-label">Commandes totales</p>
-                    <p className="stat-card-value">0</p>
+                    <p className="stat-card-value">{loading ? '...' : stats.totalOrders}</p>
                   </div>
                 </div>
               </div>
@@ -63,7 +96,7 @@ const SupplierDashboard = () => {
                   </div>
                   <div className="stat-card-info">
                     <p className="stat-card-label">Produits en stock</p>
-                    <p className="stat-card-value">0</p>
+                    <p className="stat-card-value">{loading ? '...' : stats.productsInStock}</p>
                   </div>
                 </div>
               </div>
@@ -77,7 +110,7 @@ const SupplierDashboard = () => {
                   </div>
                   <div className="stat-card-info">
                     <p className="stat-card-label">CA ce mois</p>
-                    <p className="stat-card-value">0 TND</p>
+                    <p className="stat-card-value">{loading ? '...' : `${stats.monthlyRevenue.toFixed(2)} TND`}</p>
                   </div>
                 </div>
               </div>
@@ -115,15 +148,8 @@ const SupplierDashboard = () => {
                 Mes Clients
               </button>
 
-              <button
-                className="action-button orange"
-                onClick={() => navigate('/supplier-dashboard/stats')}
-              >
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Rapports & Stats
-              </button>
+              
+                
             </div>
           </div>
         </div>
