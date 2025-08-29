@@ -1,64 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
-const ClientInventory = require('../models/ClientInventory');
-const Product = require('../models/Product');
-const Order = require('../models/Order');
 const { auth, authorize } = require('../middleware/auth');
+const { getClientInventory, updateInventoryItem } = require('../controllers/clientInventoryController');
+const ClientInventory = require('../models/ClientInventory');
+const mongoose = require('mongoose');
 
-// ✅ Toutes les routes ci-dessous exigent un token valide ET le rôle client
+// Toutes les routes ici sont protégées et réservées aux clients
 router.use(auth, authorize('client'));
 
-// LISTE — tableau de stock du client (avec jointure produit)
-router.get('/', async (req, res) => {
-  try {
-    const clientId = req.user._id; // vient du middleware auth
-    const items = await ClientInventory.find({ client: clientId })
-      .populate('product', 'name reference price images category');
-    res.json(items);
-  } catch (e) {
-    console.error('GET /client-inventory error:', e);
-    res.status(500).json({ message: 'Erreur liste inventaire', error: e.message });
-  }
-});
+// GET /api/client-inventory - Récupère l'inventaire complet du client
+router.get('/', getClientInventory);
 
-// CRÉER / METTRE À JOUR (upsert) une ligne pour un produit
-router.post('/upsert', async (req, res) => {
-  try {
-    const clientId = req.user._id;
-    const { productId, currentStock, dailyUsage, reorderPoint, reorderQty, autoOrder } = req.body;
+// PUT /api/client-inventory/:inventoryId - Met à jour les paramètres d'un article de l'inventaire
+router.put('/:inventoryId', updateInventoryItem);
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return res.status(400).json({ message: 'productId invalide' });
-    }
-
-    const prod = await Product.findById(productId);
-    if (!prod) return res.status(404).json({ message: 'Produit introuvable' });
-
-    const doc = await ClientInventory.findOneAndUpdate(
-      { client: clientId, product: productId },
-      {
-        $set: {
-          currentStock: Number(currentStock ?? 0),
-          dailyUsage: Number(dailyUsage ?? 0),
-          reorderPoint: Number(reorderPoint ?? 0),
-          reorderQty: Number(reorderQty ?? 0),
-          autoOrder: { enabled: autoOrder?.enabled !== false }
-        }
-      },
-      { new: true, upsert: true }
-    );
-    res.json(doc);
-  } catch (e) {
-    console.error('POST /client-inventory/upsert error:', e);
-    res.status(500).json({ message: 'Erreur upsert inventaire', error: e.message });
-  }
-});
-
-// AJUSTER le stock manuellement (+/-)
+// CONSERVER: AJUSTER le stock manuellement (+/-)
 router.patch('/:inventoryId/adjust', async (req, res) => {
   try {
-    const clientId = req.user._id;
+    const clientId = req.user.id; // Utiliser req.user.id du middleware auth
     const { delta } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(req.params.inventoryId)) {
@@ -69,8 +28,9 @@ router.patch('/:inventoryId/adjust', async (req, res) => {
       { _id: req.params.inventoryId, client: clientId },
       { $inc: { currentStock: Number(delta || 0) } },
       { new: true }
-    );
-    if (!inv) return res.status(404).json({ message: 'Ligne non trouvée' });
+    ).populate('product', 'name reference price images category');
+
+    if (!inv) return res.status(404).json({ message: 'Ligne d\'inventaire non trouvée ou accès refusé' });
     res.json(inv);
   } catch (e) {
     console.error('PATCH /client-inventory/:id/adjust error:', e);
@@ -78,10 +38,10 @@ router.patch('/:inventoryId/adjust', async (req, res) => {
   }
 });
 
-// SIMULER sur N jours
+// CONSERVER: SIMULER sur N jours
 router.get('/simulate-consumption', async (req, res) => {
   try {
-    const clientId = req.user._id;
+    const clientId = req.user.id;
     const days = Math.max(1, Number(req.query.days || 7));
     const items = await ClientInventory.find({ client: clientId }).populate('product', 'name price');
     const out = items.map(it => {
@@ -89,9 +49,11 @@ router.get('/simulate-consumption', async (req, res) => {
       const daily = Number(it.dailyUsage || 0);
       const projected = Math.max(0, current - daily * days);
       return {
+        _id: it._id, // Ajouter l'ID de l'inventaire pour référence
         product: it.product,
         currentStock: current,
         dailyUsage: daily,
+        reorderPoint: it.reorderPoint,
         afterDays: days,
         projectedStock: projected,
         hitsReorder: projected <= Number(it.reorderPoint || 0)

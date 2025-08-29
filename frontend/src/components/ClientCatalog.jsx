@@ -135,24 +135,6 @@ export default function ClientCatalog({ reload }) {
     navigate('/client-dashboard/new-order');
   };
 
-  const placeOrder = async (productId) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      await axios.post(
-        'http://localhost:5000/api/orders',
-        { productId, quantity: 1 },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert('Commande passée avec succès');
-    } catch (err) {
-      console.error('Erreur lors de la commande:', err.response?.data?.message || err.message);
-      alert('Erreur lors de la commande');
-    }
-  };
-
   return (
     <div className="product-list-container">
       <ClientNavbar />
@@ -303,11 +285,11 @@ export default function ClientCatalog({ reload }) {
               <div className="product-actions">
                 <button
                   onClick={() => handleOrder(p)}
-                  className="action-button blue"
+                  className={`action-button blue ${p.stock <= 0 ? 'out-of-stock' : ''}`}
                   disabled={p.stock <= 0}
                   title={p.stock <= 0 ? "Rupture de stock" : "Commander"}
                 >
-                  Ajouter au panier
+                  {p.stock > 0 ? 'Ajouter au panier' : 'En rupture'}
                 </button>
                 <button
                   onClick={() => setSelectedProduct(p)}
@@ -375,11 +357,11 @@ export default function ClientCatalog({ reload }) {
               </button>
               <button
                 onClick={() => handleOrder(selectedProduct)}
-                className="action-button blue"
+                className={`action-button blue ${selectedProduct.stock <= 0 ? 'out-of-stock' : ''}`}
                 disabled={selectedProduct.stock <= 0}
                 title={selectedProduct.stock <= 0 ? "Rupture de stock" : "Commander"}
               >
-                Ajouter au panier
+                {selectedProduct.stock > 0 ? 'Ajouter au panier' : 'En rupture'}
               </button>
             </div>
           </div>

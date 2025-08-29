@@ -1,10 +1,13 @@
-// src/contexts/CartContext.js
-import React, { createContext, useState } from 'react';
+
+
+import React, { createContext, useState, useContext } from 'react';
+import { NotificationContext } from './NotificationContext'; // Importer le contexte de notification
 
 export const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
     const [cart, setCart] = useState([]);
+    const { showNotification } = useContext(NotificationContext); // Utiliser le contexte
 
     const addToCart = (product) => {
         setCart((prevCart) => {
@@ -17,11 +20,13 @@ export const CartProvider = ({ children }) => {
                             : item
                     );
                 } else {
-                    alert(`Stock insuffisant pour ${product.name}`);
+                    // Remplacer alert par une notification
+                    showNotification(`Stock insuffisant pour ${product.name}. Vous ne pouvez pas en ajouter plus.`, 'warning');
                     return prevCart;
                 }
             } else {
                 if (product.stock > 0) {
+                    showNotification(`${product.name} a été ajouté au panier.`, 'success');
                     return [...prevCart, {
                         productId: product._id,
                         name: product.name,
@@ -30,7 +35,8 @@ export const CartProvider = ({ children }) => {
                         maxStock: product.stock
                     }];
                 } else {
-                    alert(`Produit ${product.name} en rupture de stock`);
+                    // Remplacer alert par une notification
+                    showNotification(`Produit ${product.name} est en rupture de stock.`, 'error');
                     return prevCart;
                 }
             }
@@ -50,7 +56,8 @@ export const CartProvider = ({ children }) => {
                         : item
                 );
             } else {
-                alert('Quantité demandée supérieure au stock disponible');
+                // Remplacer alert par une notification
+                showNotification('Quantité demandée supérieure au stock disponible.', 'warning');
                 return prevCart;
             }
         });
@@ -61,7 +68,7 @@ export const CartProvider = ({ children }) => {
     };
 
     const clearCart = () => {
-        setCart([]); // Reset cart to empty array
+        setCart([]);
     };
 
     return (

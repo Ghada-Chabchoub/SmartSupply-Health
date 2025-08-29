@@ -1,6 +1,8 @@
 const Order = require('../models/Order');
 const ClientInventory = require('../models/ClientInventory');
 const Product = require('../models/Product');
+const Client = require('../models/Client'); // Import Client model
+const sendEmail = require('../utils/emailService'); // Import email service
 
 const simulatePaymentGateway = async (amount, paymentDetails) => {
   console.log(`Processing payment of ${amount}€ with method ${paymentDetails.method}`);
@@ -28,7 +30,7 @@ const createAndPayAutoOrder = async (clientId) => {
   const orderProducts = itemsToOrder.map(item => ({
     product: item.product._id,
     quantity: item.reorderQty,
-    price: item.product.price,
+    unitPrice: item.product.price,
     totalPrice: item.product.price * item.reorderQty,
   }));
 
@@ -66,9 +68,37 @@ const createAndPayAutoOrder = async (clientId) => {
     };
     await order.save();
 
+    // --- NOUVELLE LOGIQUE ---
+    const client = await Client.findById(clientId);
+
     for (const item of order.items) {
+      // 1. Décrémenter le stock du fournisseur
       await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } });
     }
+
+    // 3. Envoyer l'email de confirmation
+    if (client && client.email) {
+      // Construire la liste des produits pour l'email
+      const productDetailsList = order.items.map(item => {
+        // Retrouver le nom du produit depuis la liste initiale qui a été "populée"
+        const inventoryItem = inventoryItems.find(invItem => invItem.product._id.equals(item.product));
+        const productName = inventoryItem ? inventoryItem.product.name : 'Produit inconnu';
+        return `<li>${productName} (Quantité: ${item.quantity})</li>`;
+      }).join('');
+
+      const emailHtml = `
+        <h1>Bonjour ${client.name},</h1>
+        <p>Votre commande automatique <strong>${order.orderNumber}</strong> a été créée et payée avec succès.</p>
+        <h3>Détails de la commande :</h3>
+        <ul>
+          ${productDetailsList}
+        </ul>
+        <p><strong>Montant total : ${order.totalAmount.toFixed(2)}€</strong></p>
+        <p>Merci pour votre confiance.</p>
+      `;
+      await sendEmail(client.email, 'Confirmation de votre commande automatique', emailHtml);
+    }
+    // --- FIN DE LA NOUVELLE LOGIQUE ---
 
     return { success: true, message: 'Automatic order created and paid successfully.', order };
   } else {

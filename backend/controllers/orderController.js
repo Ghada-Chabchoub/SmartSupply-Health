@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const ClientInventory = require('../models/ClientInventory'); // Importer ClientInventory
 const orderService = require('../services/orderService');
 const mongoose = require('mongoose');
 const sendEmail = require('../utils/emailService');
@@ -107,17 +108,47 @@ exports.updateOrderStatus = async (req, res) => {
         if (!['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status' });
         }
-        const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true }).populate('client');
+        
+        // Assurer que les détails du produit sont chargés pour l'email
+        const order = await Order.findById(req.params.id)
+            .populate('client', 'name email')
+            .populate('items.product', 'name'); // Charger le nom du produit
+
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Send status update email
+        // Mettre à jour le statut
+        order.status = status;
+        await order.save();
+
+        // --- Mettre à jour le stock client si la commande est livrée ---
+        if (status === 'delivered') {
+            for (const item of order.items) {
+                await ClientInventory.findOneAndUpdate(
+                    { client: order.client, product: item.product._id },
+                    { $inc: { currentStock: item.quantity } },
+                    { upsert: true, new: true }
+                );
+            }
+        }
+
+        // --- Envoyer l'email de mise à jour avec les détails ---
         if (order.client && order.client.email) {
-            const subject = `Your Order Status has been updated to ${status}`;
-            const html = `<p>Hi ${order.client.name},</p>
-                        <p>The status of your order with number ${order.orderNumber} has been updated to ${status}.</p>
-                        <p>Thank you for your patience!</p>`;
+            const productDetailsList = order.items.map(item => 
+                `<li>${item.product.name} (Quantité: ${item.quantity})</li>`
+            ).join('');
+
+            const subject = `Mise à jour du statut de votre commande : ${status}`;
+            const html = `
+                <p>Bonjour ${order.client.name},</p>
+                <p>Le statut de votre commande <strong>${order.orderNumber}</strong> est maintenant : <strong>${status}</strong>.</p>
+                <h3>Détails de la commande :</h3>
+                <ul>
+                    ${productDetailsList}
+                </ul>
+                <p>Merci pour votre patience !</p>
+            `;
             await sendEmail(order.client.email, subject, html);
         }
 

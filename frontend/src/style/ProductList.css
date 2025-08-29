@@ -579,13 +579,14 @@
   transition: var(--transition);
 }
 
-/* Styles pour le carrousel de recommandations */
 .recommendations-carousel-section {
   padding: 24px 20px;
-  background: linear-gradient(135deg, #f7fafc 0%, #f0f4f8 100%);
+  background: linear-gradient(135deg, #e0f2ff 0%, #f0f8ff 100%);
   border-bottom: 1px solid var(--gray-200);
   border-top: 1px solid var(--gray-200);
   margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .recommendations-header {
@@ -652,3 +653,28 @@
   background: var(--gray-200);
   color: var(--gray-800);
 }
+  
+.action-button.out-of-stock {  
+  background-color: #dc3545;  
+  color: white;  
+  cursor: not-allowed;  
+} 
+  
+.category-select {  
+  padding: 10px 15px;  
+  border: 1px solid #ddd;  
+  border-radius: 8px;  
+  background-color: #fff;  
+  font-size: 1rem;  
+  color: #333;  
+  transition: border-color 0.2s, box-shadow 0.2s;  
+  cursor: pointer;  
+}  
+.category-select:focus {  
+  outline: none;  
+  border-color: #007bff;  
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);  
+} 
+  
+
+ 

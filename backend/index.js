@@ -18,6 +18,8 @@ const paymentRoutes = require('./routes/payment');
 
 // Error handler (doit être APRES les routes)
 const errorHandler = require('./middleware/errorHandler');
+const { scheduleDailyConsumption } = require('./jobs/dailyConsumption');
+
 
 
 
@@ -63,6 +65,9 @@ async function start() {
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+    // Démarrer les tâches planifiées
+    scheduleDailyConsumption();
   } catch (err) {
     console.error('MongoDB connection error:', err);
     process.exit(1);

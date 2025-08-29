@@ -1,18 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../style/NewOrder.css';
 import ClientNavbar from './dashboard/ClientNavbar';
 import PaymentModal from './PaymentModal';
 import Notification from './common/Notification';
+import { CartContext } from '../contexts/CartContext'; // 1. Importer le contexte
 
 export default function NewOrder() {
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
+  // 2. Utiliser le contexte pour le panier
+  const { cart, updateCartQuantity, removeFromCart, clearCart } = useContext(CartContext);
+
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
   const [isCheckoutVisible, setCheckoutVisible] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState({
     street: '',
@@ -32,63 +32,10 @@ export default function NewOrder() {
     });
   }, [token]);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const { data } = await axiosAuth.get('/api/products/public');
-        setProducts(Array.isArray(data) ? data : []);
-      } catch (e) {
-        console.error(e);
-        setNotification({ message: 'Erreur lors du chargement des produits.', type: 'error' });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, [axiosAuth]);
-
-  const addToCart = (product) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.product._id === product._id);
-      if (existingItem) {
-        return prevCart.map((item) =>
-          item.product._id === product._id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prevCart, { product, quantity: 1 }];
-    });
-  };
-
-  const updateQuantity = (productId, delta) => {
-    setCart((prevCart) =>
-      prevCart
-        .map((item) =>
-          item.product._id === productId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
-  };
-
-  const removeFromCart = (productId) => {
-    setCart((prevCart) => prevCart.filter((item) => item.product._id !== productId));
-  };
-
+  // 3. Le calcul du total utilise maintenant le panier du contexte
   const totalAmount = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [cart]);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (selectedCategory === '' || p.category === selectedCategory)
-    );
-  }, [products, searchTerm, selectedCategory]);
 
   const handleConfirmOrder = async () => {
     if (Object.values(deliveryAddress).some(field => !field.trim())) {
@@ -100,9 +47,9 @@ export default function NewOrder() {
       setLoading(true);
       const orderData = {
         products: cart.map(item => ({
-          product: item.product._id,
+          product: item.productId, // Utiliser productId du contexte
           quantity: item.quantity,
-          price: item.product.price,
+          price: item.price,
         })),
         deliveryAddress,
         notes: orderNotes,
@@ -124,7 +71,7 @@ export default function NewOrder() {
       setLoading(true);
       await axiosAuth.post(`/api/payments/pay/${orderId}`, { paymentDetails });
       setOrderToPay(null);
-      setCart([]);
+      clearCart(); // Vider le panier du contexte
       setNotification({ message: 'Commande et paiement réussis !', type: 'success' });
       setTimeout(() => navigate('/client-dashboard/orders'), 1500);
     } catch (e) {
@@ -150,92 +97,40 @@ export default function NewOrder() {
         onClose={() => setNotification({ message: '', type: '' })} 
       />
       <header className="new-order-header">
-        <h1>Passer une Nouvelle Commande</h1>
-        <p>Parcourez notre catalogue et ajoutez des produits à votre panier.</p>
+        <h1>Mon Panier</h1>
+        <p>Vérifiez les articles de votre panier avant de finaliser la commande.</p>
       </header>
 
-      <div className="order-content">
-        <div className="products-section">
-          <div className="products-header">
-            <h2>Catalogue de Produits</h2>
-            <div className="filters">
-              <input
-                type="text"
-                placeholder="Rechercher un produit..."
-                className="search-input"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <select
-                className="category-filter"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <option value="">Toutes les catégories</option>
-                {[...new Set(products.map(p => p.category))].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="products-grid">
-            {loading ? (
-              <p>Chargement...</p>
-            ) : (
-              filteredProducts.map((p) => (
-                <div key={p._id} className="product-card">
-                  <img src={`http://localhost:5000/${p.image}`} alt={p.name} className="product-image" />
-                  <div className="product-info">
-                    <h3 className="product-name">{p.name}</h3>
-                    <p className="product-description">{p.description}</p>
-                    <div className="product-details">
-                      <span className="product-price">{p.price.toFixed(2)} €</span>
-                      <span className={`product-stock ${p.stock < 10 ? 'low-stock' : ''}`}>
-                        Stock: {p.stock}
-                      </span>
-                    </div>
-                    <button
-                      className="add-to-cart-btn"
-                      onClick={() => addToCart(p)}
-                      disabled={p.stock === 0}
-                    >
-                      {p.stock > 0 ? 'Ajouter au Panier' : 'En rupture'}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
+      {/* 4. La section catalogue est supprimée. On affiche directement le panier. */}
+      <div className="order-content-cart-only">
         <div className="cart-section">
           <div className="cart-header">
-            <h2>Votre Panier</h2>
+            <h2>Votre Commande</h2>
           </div>
           {cart.length === 0 ? (
             <div className="empty-cart">
               <p>Votre panier est vide.</p>
-              <p>Ajoutez des produits depuis le catalogue pour commencer.</p>
+              <p>Ajoutez des produits depuis le <a href="/client-dashboard/catalog">catalogue</a> pour commencer.</p>
             </div>
           ) : (
             <>
               <div className="cart-items">
                 {cart.map((item) => (
-                  <div key={item.product._id} className="cart-item">
+                  <div key={item.productId} className="cart-item">
                     <div className="item-info">
-                      <h4>{item.product.name}</h4>
-                      <p>{item.product.price.toFixed(2)} €</p>
+                      <h4>{item.name}</h4>
+                      <p>{item.price.toFixed(2)} €</p>
                     </div>
                     <div className="item-controls">
                       <div className="quantity-controls">
-                        <button className="qty-btn" onClick={() => updateQuantity(item.product._id, -1)}>-</button>
+                        <button className="qty-btn" onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}>-</button>
                         <span className="quantity">{item.quantity}</span>
-                        <button className="qty-btn" onClick={() => updateQuantity(item.product._id, 1)} disabled={item.quantity >= item.product.stock}>+</button>
+                        <button className="qty-btn" onClick={() => updateCartQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.maxStock}>+</button>
                       </div>
                       <span className="item-total">
-                        {(item.product.price * item.quantity).toFixed(2)} €
+                        {(item.price * item.quantity).toFixed(2)} €
                       </span>
-                      <button className="remove-btn" onClick={() => removeFromCart(item.product._id)}>×</button>
+                      <button className="remove-btn" onClick={() => removeFromCart(item.productId)}>×</button>
                     </div>
                   </div>
                 ))}

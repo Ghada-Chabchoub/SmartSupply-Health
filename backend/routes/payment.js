@@ -5,6 +5,7 @@ const router = express.Router();
 const { auth, authorize } = require('../middleware/auth');
 
 const Order = require('../models/Order');
+const ClientInventory = require('../models/ClientInventory'); // Importer ClientInventory
 const { createAndPayAutoOrder, simulatePaymentGateway } = require('../services/paymentService');
 
 // ----- Controllers -----
@@ -35,6 +36,7 @@ const processPayment = async (req, res) => {
         transactionId: paymentResult.transactionId,
       };
       await order.save();
+
       return res.json({ message: 'Payment successful', order });
     } else {
       order.paymentStatus = 'Failed';

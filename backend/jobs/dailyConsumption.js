@@ -19,8 +19,8 @@ async function runAutoOrdersForClient(client) {
 }
 
 function scheduleDailyConsumption() {
-  // Schedule to run every day at 00:05 (server time)
-  cron.schedule('5 0 * * *', async () => {
+  // Schedule to run every day at 'min h' (server time)
+  cron.schedule('19 22 * * *', async () => {
     console.log('Starting daily consumption and auto-order job...');
     try {
       // 1. Decrement stock based on daily usage for all inventories
