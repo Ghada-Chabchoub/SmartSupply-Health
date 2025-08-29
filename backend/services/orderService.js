@@ -20,7 +20,7 @@ const createOrder = async (orderData) => {
   const order = new Order({
     orderNumber: await generateOrderNumber(),
     client: clientId,
-    items: products.map(p => ({ // Corrected field name from 'products' to 'items'
+    items: products.map(p => ({
       product: p.product,
       quantity: p.quantity,
       unitPrice: p.price,
@@ -38,4 +38,9 @@ const createOrder = async (orderData) => {
   return order;
 };
 
-module.exports = { createOrder };
+const getOrders = async (filter, options) => {
+  const orders = await Order.paginate(filter, options);
+  return orders;
+};
+
+module.exports = { createOrder, getOrders };

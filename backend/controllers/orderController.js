@@ -47,10 +47,14 @@ exports.getOrders = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     let filter = {};
+
     if (req.user.role === 'client') {
       filter.client = req.user.id;
     }
-    // ... (rest of the filtering logic remains the same)
+
+    if (status) {
+      filter.status = status;
+    }
 
     const options = {
       page: parseInt(page),
@@ -62,7 +66,8 @@ exports.getOrders = async (req, res) => {
       ]
     };
 
-    const orders = await Order.paginate(filter, options);
+    const orders = await orderService.getOrders(filter, options);
+    
     res.json({
       success: true,
       data: orders.docs,
