@@ -9,9 +9,7 @@ const Client = require('../models/Client');
 // Create a new order
 exports.createOrder = async (req, res) => {
   try {
-    console.log('--- RECEIVED REQUEST BODY ---');
-    console.log(req.body);
-    console.log('-----------------------------');
+    
     const { products, deliveryAddress, notes, totalAmount } = req.body;
 
     const orderData = {
@@ -48,9 +46,7 @@ exports.getOrders = async (req, res) => {
     const { status, page = 1, limit = 10 } = req.query;
     let filter = {};
 
-    if (req.user.role === 'client') {
-      filter.client = req.user.id;
-    }
+   
 
     if (status) {
       filter.status = status;
@@ -61,8 +57,8 @@ exports.getOrders = async (req, res) => {
       limit: parseInt(limit),
       sort: { createdAt: -1 },
       populate: [
-        { path: 'items.product', select: 'name description price category imageUrl' },
-        { path: 'client', select: 'name email clinicName' }
+        { path: 'items.product',       select: 'orderNumber items totalAmount status paymentStatus createdAt', // Explicitly select the fields needed },
+         path: 'client', select: 'name email clinicName' }
       ]
     };
 

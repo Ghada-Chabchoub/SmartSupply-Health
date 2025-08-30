@@ -15,7 +15,7 @@ const ClientNavbar = () => {
   const navLinks = [
     { name: 'Dashboard', path: '/client-dashboard' },
     { name: 'Catalogue Produits', path: '/client-dashboard/catalog' },
-    { name: 'Nouvelle Commande', path: '/client-dashboard/new-order' },
+    { name: 'Panier', path: '/client-dashboard/new-order' },
     { name: 'Mes Commandes', path: '/client-dashboard/orders' },
     { name: 'Stock', path: '/client-dashboard/stock' },
   ];

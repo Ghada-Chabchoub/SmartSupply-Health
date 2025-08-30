@@ -9,7 +9,7 @@ const Register = () => {
     email: '',
     password: '',
     phone: '',
-    role: '',
+    role: 'client',
     clinicName: '',
     clinicType: '',
     address: '',
@@ -84,19 +84,6 @@ const Register = () => {
                 <span className="auth-radio-text">Client </span>
               </label>
 
-              <label className="auth-radio-label">
-                <input
-                  type="radio"
-                  name="role"
-                  value="supplier"
-                  checked={formData.role === 'supplier'}
-                  onChange={handleChange}
-                  disabled={loading}
-                  className="auth-radio"
-                />
-                <span className="auth-radio-custom"></span>
-                <span className="auth-radio-text">Fournisseur</span>
-              </label>
             </div>
           </div>
 

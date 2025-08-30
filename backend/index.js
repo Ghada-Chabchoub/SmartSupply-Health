@@ -61,7 +61,6 @@ app.use(errorHandler);
 /* ------------------------ 6) MONGOOSE CONNECTION --------------------- */
 async function start() {
   try {
-    // Mongoose v6+ : pas besoin de useNewUrlParser/useUnifiedTopology
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB connected');
 

@@ -1,12 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import ClientNavbar from './ClientNavbar';
+import api from '../../services/api'; // Assuming you have an api service
 
 const ClientDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    pendingOrders: 0,
+    deliveredOrders: 0,
+    totalPaidThisMonth: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const ordersResponse = await api.get('/orders');
+        const orders = ordersResponse.data.data || [];
+
+        const pendingOrders = orders.filter(order =>
+          ['pending', 'confirmed', 'processing', 'shipped'].includes(order.status)
+        ).length;
+
+        const deliveredOrders = orders.filter(order => order.status === 'delivered').length;
+
+        // Calculate total amount paid for the current month
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+
+        const totalPaidThisMonth = orders
+          .filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return (
+              order.paymentStatus === 'Paid' &&
+              orderDate.getMonth() === currentMonth &&
+              orderDate.getFullYear() === currentYear
+            );
+          })
+          .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+        setStats({
+          pendingOrders,
+          deliveredOrders,
+          totalPaidThisMonth,
+        });
+
+      } catch (error) {
+        console.error("Erreur lors de la récupération des données du tableau de bord:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   return (
     <div className="dashboard-container">
@@ -35,7 +86,7 @@ const ClientDashboard = () => {
                   </div>
                   <div className="stat-card-info">
                     <p className="stat-card-label">Commandes en cours</p>
-                    <p className="stat-card-value">0</p>
+                    <p className="stat-card-value">{loading ? '...' : stats.pendingOrders}</p>
                   </div>
                 </div>
               </div>
@@ -49,21 +100,23 @@ const ClientDashboard = () => {
                   </div>
                   <div className="stat-card-info">
                     <p className="stat-card-label">Commandes livrées</p>
-                    <p className="stat-card-value">0</p>
+                    <p className="stat-card-value">{loading ? '...' : stats.deliveredOrders}</p>
                   </div>
                 </div>
               </div>
 
               <div className="stat-card">
                 <div className="stat-card-content">
-                  <div className="stat-card-icon yellow">
+                  <div className="stat-card-icon purple">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0L4.186 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
                   </div>
                   <div className="stat-card-info">
-                    <p className="stat-card-label">Alertes stock</p>
-                    <p className="stat-card-value">0</p>
+                    <p className="stat-card-label">Montant payé ce mois</p>
+                    <p className="stat-card-value">
+                      {loading ? '...' : `${stats.totalPaidThisMonth.toFixed(2)} €`}
+                    </p>
                   </div>
                 </div>
               </div>
