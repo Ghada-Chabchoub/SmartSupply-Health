@@ -1,17 +1,18 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 
-// Create product
+// Create product (handles JSON data)
 exports.createProduct = async (req, res) => {
   try {
-    const { name, reference, description, price, stock, category } = req.body;
-    const images = req.files ? req.files.map(file => '/uploads/' + file.filename) : [];
-
+    const { name, description, price, stock, category, usageInstructions, brandInfo, targetAudience, technicalSpecs, faqs } = req.body;
+    
     const product = new Product({
       supplier: req.user.id,
-      name, reference, description, price, stock, category,
-      images
+      name, description, price, stock, category,
+      usageInstructions, brandInfo, targetAudience, technicalSpecs, faqs,
+      images: [] // Images are now uploaded separately
     });
+
     await product.save();
     res.status(201).json(product);
   } catch (err) {
@@ -20,25 +21,30 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// Update product
+// Update product (handles JSON data)
 exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await Product.findOne({ _id: id, supplier: req.user.id });
     if (!product) return res.status(404).json({ message: 'Product not found' });
 
-    if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(file => '/uploads/' + file.filename);
-      product.images = [...product.images, ...newImages];
+    // Update all fields from request body
+    Object.assign(product, req.body);
+
+    // Parse JSON fields if they exist
+    if (req.body.technicalSpecs) {
+      product.technicalSpecs = JSON.parse(req.body.technicalSpecs);
+    }
+    if (req.body.faqs) {
+      product.faqs = JSON.parse(req.body.faqs);
     }
 
-    const { name, reference, description, price, stock, category } = req.body;
-    if (name !== undefined) product.name = name;
-    if (reference !== undefined) product.reference = reference;
-    if (description !== undefined) product.description = description;
-    if (price !== undefined) product.price = price;
-    if (stock !== undefined) product.stock = stock;
-    if (category !== undefined) product.category = category;
+    // Handle new image uploads
+    if (req.files && req.files.length > 0) {
+      const newImages = req.files.map(file => '/uploads/' + file.filename);
+      // Replace old images with new ones
+      product.images = newImages;
+    }
 
     await product.save();
     res.json(product);
@@ -48,72 +54,130 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// Delete (soft)
-exports.deleteProduct = async (req, res) => {
+// Upload images for a product
+exports.uploadProductImages = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await Product.findOne({ _id: id, supplier: req.user.id });
     if (!product) return res.status(404).json({ message: 'Product not found' });
-    product.active = false;
-    await product.save();
-    res.json({ message: 'Deleted' });
+
+    if (req.files && req.files.length > 0) {
+      const newImages = req.files.map(file => '/uploads/' + file.filename);
+      product.images = [...product.images, ...newImages]; // Append new images
+      await product.save();
+    }
+    res.json(product);
+  } catch (err) {
+    console.error('Error in uploadProductImages:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Delete product
+exports.deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Instead of deleting, you might want to set an 'active' flag to false (soft delete)
+    const result = await Product.deleteOne({ _id: id, supplier: req.user.id });
+    if (result.deletedCount === 0) return res.status(404).json({ message: 'Product not found' });
+    res.json({ message: 'Product deleted successfully' });
   } catch (err) {
     console.error('Error in deleteProduct:', err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get product by id
-exports.getProduct = async (req, res) => {
+// Get a single product by ID
+exports.getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!mongoose.isValidObjectId(id)) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid product ID' });
     }
-    const product = await Product.findOne({ _id: id, supplier: req.user.id });
+    const product = await Product.findById(id).populate('supplier', 'name');
     if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json(product);
   } catch (err) {
-    console.error('Error in getProduct:', err);
+    console.error('Error in getProductById:', err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// List products with pagination, search, sorting
-exports.listProducts = async (req, res) => {
+// Get all products for the logged-in supplier
+exports.getProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, q, category, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-
-    const filter = { supplier: req.user._id, active: true };
-
-    if (category) {
-      filter.category = category; // Exact match for category
-    }
-
-    if (q) {
-      filter.$or = [
-        { name: { $regex: q, $options: 'i' } },
-        { reference: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } }
-      ];
-    }
-
-    const skip = (page - 1) * limit;
-    const total = await Product.countDocuments(filter);
+    const { page = 1, limit = 10, q, category } = req.query;
+    const filter = { supplier: req.user.id };
+    if (q) filter.name = { $regex: q, $options: 'i' };
+    if (category) filter.category = category;
 
     const products = await Product.find(filter)
-      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
-      .skip(Number(skip))
-      .limit(Number(limit));
+      .populate('supplier', 'name') // <-- Added populate for consistency
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+    
+    const count = await Product.countDocuments(filter);
 
     res.json({
       data: products,
-      page: Number(page),
-      total,
-      pages: Math.ceil(total / limit)
+      totalPages: Math.ceil(count / limit),
+      currentPage: page
     });
   } catch (err) {
-    console.error('Error in listProducts:', err);
+    console.error('Error in getProducts:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get products for the client catalog view
+exports.getProductsForClient = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, q, category } = req.query;
+    const filter = {};
+    if (q) filter.name = { $regex: q, $options: 'i' };
+    if (category) filter.category = category;
+
+    const products = await Product.find(filter)
+      .populate('supplier', 'name')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+
+    const count = await Product.countDocuments(filter);
+
+    res.json({
+      data: products,
+      pages: Math.ceil(count / limit),
+      currentPage: page
+    });
+  } catch (err) {
+    console.error('Error in getProductsForClient:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get all unique categories
+exports.getAllCategories = async (req, res) => {
+  try {
+    const categories = await Product.distinct('category');
+    res.json(categories);
+  } catch (err) {
+    console.error('Error in getAllCategories:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Add a new category
+exports.addCategory = async (req, res) => {
+  try {
+    // This is a placeholder implementation. In a real app, you'd have a separate Category collection.
+    const { category } = req.body;
+    if (!category) return res.status(400).json({ message: 'Category name is required' });
+    // Logic to add category, perhaps check if it exists
+    res.status(201).json({ message: `Category '${category}' added notionally.` });
+  } catch (err) {
+    console.error('Error in addCategory:', err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -137,101 +201,4 @@ exports.updateStock = async (req, res) => {
   }
 };
 
-// List products for client
-exports.listProductsForClient = async (req, res) => {
-  try {
-    let { page = 1, limit = 10, q, category, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-    page = parseInt(page, 10);
-    limit = parseInt(limit, 10);
-
-    const filter = { active: true };
-
-    if (category) {
-      filter.category = category;
-    }
-
-    if (q) {
-      filter.$or = [
-        { name: { $regex: q, $options: 'i' } },
-        { reference: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } }
-      ];
-    }
-
-    const skip = (page - 1) * limit;
-    const total = await Product.countDocuments(filter);
-
-    const products = await Product.find(filter)
-      .populate('supplier', 'name')
-      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
-      .skip(skip)
-      .limit(limit);
-
-    res.json({
-      data: products,
-      page,
-      total,
-      pages: Math.ceil(total / limit)
-    });
-  } catch (err) {
-    console.error('Error in listProductsForClient:', err);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Get unique categories
-exports.getCategories = async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-    const categories = await Product.distinct('category', { active: true });
-    res.json(categories.filter(category => category));
-  } catch (err) {
-    console.error('Error in getCategories:', err);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Add new category
-exports.addCategory = async (req, res) => {
-  try {
-    const { category } = req.body;
-    if (!category) return res.status(400).json({ message: 'Category is required' });
-
-    const existingCategory = await Product.findOne({ category, active: true });
-    if (existingCategory) {
-      return res.status(400).json({ message: 'Category already exists' });
-    }
-
-    const product = new Product({
-      supplier: req.user.id,
-      name: `Placeholder for ${category}`,
-      reference: `CAT-${category.toUpperCase()}`,
-      category,
-      price: 0,
-      stock: 0,
-      active: false
-    });
-    await product.save();
-
-    res.status(201).json({ message: 'Category added', category });
-  } catch (err) {
-    console.error('Error in addCategory:', err);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Get all active products for public view (no auth required)
-exports.getPublicProducts = async (req, res) => {
-  try {
-    const products = await Product.find({ active: true })
-      .populate('supplier', 'name')
-      .sort({ name: 1 });
-    res.json(products);
-  } catch (err) {
-    console.error('Error in getPublicProducts:', err);
-    res.status(500).json({ message: 'Server error while fetching public products' });
-  }
-};

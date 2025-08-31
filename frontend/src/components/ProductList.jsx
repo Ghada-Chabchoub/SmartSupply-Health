@@ -47,7 +47,7 @@ export default function ProductList({ onEdit, reload }) {
       if (!token) {
         throw new Error('No authentication token found');
       }
-      const res = await axios.get('http://localhost:5000/api/products', {
+      const res = await axios.get('http://localhost:5000/api/products/supplier', {
         params: { q, category: category || undefined, page, limit: 10 },
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -120,6 +120,12 @@ export default function ProductList({ onEdit, reload }) {
   const simulatePrice = async (productId) => {
     try {
       const token = localStorage.getItem('token');
+      // First, trigger the scraping process to gather data
+      await axios.post(`http://localhost:5000/api/scrape/${productId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Then, perform the simulation
       const res = await axios.get(`http://localhost:5000/api/simulate/${productId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });

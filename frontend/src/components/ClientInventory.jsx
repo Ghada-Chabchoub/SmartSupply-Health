@@ -123,7 +123,7 @@ export default function ClientInventory() {
       <ClientNavbar />
       <header className="inventory-header">
         <h1 className="title">Gestion de l'Inventaire</h1>
-        <p>Les produits apparaissent ici automatiquement après la livraison d\'une commande.</p>
+        <p>Les produits apparaissent ici automatiquement après la livraison d'une commande.</p>
       </header>
 
       <div className="card">

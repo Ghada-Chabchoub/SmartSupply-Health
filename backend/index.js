@@ -16,13 +16,15 @@ const scrapingRoutes = require('./routes/scraping');
 const clientInventoryRoutes = require('./routes/clientInventory');
 const paymentRoutes = require('./routes/payment');
 const supplierRoutes = require('./routes/supplier');
+const chatbotRoutes = require('./routes/chatbot'); // <-- AJOUTER CETTE LIGNE
+const errorHandler = require('./middleware/errorHandler');
 
 // Error handler (doit être APRES les routes)
-const errorHandler = require('./middleware/errorHandler');
+const connectDB = require('./config/db');
 const { scheduleDailyConsumption } = require('./jobs/dailyConsumption');
 
-
-
+// Connexion à la base de données
+connectDB();
 
 const app = express();
 
@@ -48,6 +50,7 @@ app.use('/api', scrapingRoutes);
 app.use('/api/client-inventory', clientInventoryRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/supplier', supplierRoutes);
+app.use('/api/chatbot', chatbotRoutes); // <-- AJOUTER CETTE LIGNE
 
 /* ------------------------ 4) HEALTHCHECK ----------------------------- */
 app.get('/api/health', (req, res) => {
@@ -59,20 +62,9 @@ app.get('/api/health', (req, res) => {
 app.use(errorHandler);
 
 /* ------------------------ 6) MONGOOSE CONNECTION --------------------- */
-async function start() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB connected');
-
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-    // Démarrer les tâches planifiées
-    scheduleDailyConsumption();
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  }
-}
-
-start();
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  // Démarrer les tâches planifiées une fois le serveur démarré
+  scheduleDailyConsumption();
+});

@@ -5,11 +5,16 @@ import '../style/ProductForm.css';
 export default function ProductForm({ product, onSaved }) {
   const [form, setForm] = useState({
     name: '',
-    reference: '',
     description: '',
     price: 0,
     stock: 0,
-    category: ''
+    category: '',
+    // --- IA Fields ---
+    usageInstructions: '',
+    brandInfo: '',
+    targetAudience: '',
+    technicalSpecs: [{ specName: '', specValue: '' }],
+    faqs: [{ question: '', answer: '' }]
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -35,18 +40,68 @@ export default function ProductForm({ product, onSaved }) {
     if (product) {
       setForm({
         name: product.name || '',
-        reference: product.reference || '',
         description: product.description || '',
         price: product.price || 0,
         stock: product.stock || 0,
-        category: product.category || ''
+        category: product.category || '',
+        // --- IA Fields ---
+        usageInstructions: product.usageInstructions || '',
+        brandInfo: product.brandInfo || '',
+        targetAudience: product.targetAudience || '',
+        technicalSpecs: product.technicalSpecs?.length ? product.technicalSpecs : [{ specName: '', specValue: '' }],
+        faqs: product.faqs?.length ? product.faqs : [{ question: '', answer: '' }]
       });
-      setSelectedFiles([]);
     } else {
-      setForm({ name: '', reference: '', description: '', price: 0, stock: 0, category: '' });
-      setSelectedFiles([]);
+      // Reset form for new product
+      setForm({
+        name: '',
+        description: '',
+        price: 0,
+        stock: 0,
+        category: '',
+        usageInstructions: '',
+        brandInfo: '',
+        targetAudience: '',
+        technicalSpecs: [{ specName: '', specValue: '' }],
+        faqs: [{ question: '', answer: '' }]
+      });
     }
+    setSelectedFiles([]);
   }, [product]);
+
+  // --- Handlers for dynamic fields ---
+
+  // Specs
+  const handleSpecChange = (index, field, value) => {
+    const newSpecs = [...form.technicalSpecs];
+    newSpecs[index][field] = value;
+    setForm({ ...form, technicalSpecs: newSpecs });
+  };
+
+  const addSpec = () => {
+    setForm({ ...form, technicalSpecs: [...form.technicalSpecs, { specName: '', specValue: '' }] });
+  };
+
+  const removeSpec = (index) => {
+    const newSpecs = form.technicalSpecs.filter((_, i) => i !== index);
+    setForm({ ...form, technicalSpecs: newSpecs });
+  };
+
+  // FAQs
+  const handleFaqChange = (index, field, value) => {
+    const newFaqs = [...form.faqs];
+    newFaqs[index][field] = value;
+    setForm({ ...form, faqs: newFaqs });
+  };
+
+  const addFaq = () => {
+    setForm({ ...form, faqs: [...form.faqs, { question: '', answer: '' }] });
+  };
+
+  const removeFaq = (index) => {
+    const newFaqs = form.faqs.filter((_, i) => i !== index);
+    setForm({ ...form, faqs: newFaqs });
+  };
 
   const handleFileChange = e => {
     setSelectedFiles([...e.target.files]);
@@ -72,36 +127,49 @@ export default function ProductForm({ product, onSaved }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const data = new FormData();
-      data.append('name', form.name);
-      data.append('reference', form.reference);
-      data.append('description', form.description);
-      data.append('price', form.price);
-      data.append('stock', form.stock);
-      data.append('category', form.category);
+    
+    const formData = new FormData();
+    
+    // Append all form fields to formData
+    Object.keys(form).forEach(key => {
+      if (key === 'technicalSpecs' || key === 'faqs') {
+        formData.append(key, JSON.stringify(form[key]));
+      } else {
+        formData.append(key, form[key]);
+      }
+    });
 
-      selectedFiles.forEach(file => {
-        data.append('images', file);
-      });
+    // Append files
+    selectedFiles.forEach(file => {
+      formData.append('images', file);
+    });
+
+    try {
+      const headers = { 
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'multipart/form-data'
+      };
 
       if (product) {
-        await axios.put(`http://localhost:5000/api/products/${product._id}`, data, {
-          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        alert('Produit mis à jour');
+        // Update product with images
+        await axios.put(`http://localhost:5000/api/products/${product._id}`, formData, { headers });
       } else {
-        await axios.post('http://localhost:5000/api/products', data, {
-          headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${localStorage.getItem('token')}` }
+        // Create new product, then upload images
+        const response = await axios.post('http://localhost:5000/api/products', form, { 
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        alert('Produit créé');
-        setForm({ name: '', reference: '', description: '', price: 0, stock: 0, category: '' });
-        setSelectedFiles([]);
+        const productId = response.data._id;
+        if (selectedFiles.length > 0) {
+          await axios.post(`http://localhost:5000/api/products/${productId}/images`, formData, { headers });
+        }
       }
+
+      alert(`Produit ${product ? 'mis à jour' : 'créé'} avec succès`);
       onSaved && onSaved();
+
     } catch (err) {
-      console.error(err);
-      alert('Erreur enregistrement');
+      console.error('Erreur lors de l\'enregistrement du produit:', err.response?.data || err);
+      alert('Erreur enregistrement: ' + (err.response?.data?.message || 'Vérifiez les champs'));
     }
   };
 
@@ -126,16 +194,6 @@ export default function ProductForm({ product, onSaved }) {
         </div>
 
         <div className="form-field">
-          <label className="field-label">Référence</label>
-          <input 
-            placeholder="REF-001" 
-            value={form.reference} 
-            onChange={e => setForm({ ...form, reference: e.target.value })} 
-            className="field-input reference"
-          />
-        </div>
-
-        <div className="form-field">
           <label className="field-label">Description</label>
           <textarea 
             placeholder="Description détaillée du produit..." 
@@ -144,6 +202,89 @@ export default function ProductForm({ product, onSaved }) {
             className="field-textarea"
           />
         </div>
+
+        {/* --- Section IA --- */}
+        <details className="ia-details-section">
+          <summary>Détails pour l'Assistant IA (Optionnel)</summary>
+          
+          <div className="form-field">
+            <label className="field-label">Instructions d'utilisation</label>
+            <textarea 
+              placeholder="Comment utiliser ce produit, précautions, etc." 
+              value={form.usageInstructions} 
+              onChange={e => setForm({ ...form, usageInstructions: e.target.value })} 
+              className="field-textarea"
+            />
+          </div>
+
+          <div className="form-field">
+            <label className="field-label">Informations sur la marque</label>
+            <input 
+              placeholder="Histoire, avantages ou réputation de la marque" 
+              value={form.brandInfo} 
+              onChange={e => setForm({ ...form, brandInfo: e.target.value })} 
+              className="field-input"
+            />
+          </div>
+
+          <div className="form-field">
+            <label className="field-label">Audience Cible</label>
+            <input 
+              placeholder="Ex: Cliniques dentaires, laboratoires, hôpitaux..." 
+              value={form.targetAudience} 
+              onChange={e => setForm({ ...form, targetAudience: e.target.value })} 
+              className="field-input"
+            />
+          </div>
+
+          {/* --- Spécifications Techniques --- */}
+          <div className="dynamic-section">
+            <h4 className="dynamic-section-title">Spécifications Techniques</h4>
+            {form.technicalSpecs.map((spec, index) => (
+              <div key={index} className="dynamic-item">
+                <input 
+                  placeholder="Caractéristique (ex: Matériau)" 
+                  value={spec.specName} 
+                  onChange={e => handleSpecChange(index, 'specName', e.target.value)} 
+                  className="field-input"
+                />
+                <input 
+                  placeholder="Valeur (ex: Acier inoxydable)" 
+                  value={spec.specValue} 
+                  onChange={e => handleSpecChange(index, 'specValue', e.target.value)} 
+                  className="field-input"
+                />
+                <button type="button" onClick={() => removeSpec(index)} className="remove-btn">✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={addSpec} className="add-btn">Ajouter une spécification</button>
+          </div>
+
+          {/* --- FAQs --- */}
+          <div className="dynamic-section">
+            <h4 className="dynamic-section-title">FAQ</h4>
+            {form.faqs.map((faq, index) => (
+              <div key={index} className="dynamic-item">
+                <input 
+                  placeholder="Question" 
+                  value={faq.question} 
+                  onChange={e => handleFaqChange(index, 'question', e.target.value)} 
+                  className="field-input"
+                />
+                <textarea 
+                  placeholder="Réponse" 
+                  value={faq.answer} 
+                  onChange={e => handleFaqChange(index, 'answer', e.target.value)} 
+                  className="field-textarea"
+                />
+                <button type="button" onClick={() => removeFaq(index)} className="remove-btn">✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={addFaq} className="add-btn">Ajouter une FAQ</button>
+          </div>
+
+        </details>
+        {/* --- Fin Section IA --- */}
 
         <div className="form-field price-field">
           <label className="field-label">Prix (€)</label>

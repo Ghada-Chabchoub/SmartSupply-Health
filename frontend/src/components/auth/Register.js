@@ -82,7 +82,28 @@ const Register = () => {
                 />
                 <span className="auth-radio-custom"></span>
                 <span className="auth-radio-text">Client </span>
+                 
+
               </label>
+              {/* AEFFACER
+               
+              <label className="auth-radio-label">
+                <input
+                  type="radio"
+                  name="role"
+                  value="supplier"
+                  checked={formData.role === 'supplier'}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="auth-radio"
+                />
+                <span className="auth-radio-custom"></span>
+                <span className="auth-radio-text">Supp </span>
+                 
+
+              </label> 
+
+              */}
 
             </div>
           </div>

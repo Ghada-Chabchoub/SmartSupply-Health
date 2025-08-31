@@ -1,39 +1,40 @@
 const express = require('express');
 const router = express.Router();
-const { auth, authorize } = require('../middleware/auth');
-const controller = require('../controllers/productController');
-const upload = require('../middleware/upload'); // middleware multer configuré
+const productController = require('../controllers/productController');
+const { auth } = require('../middleware/auth'); // Assuming authorize is for role checks
+const upload = require('../middleware/upload');
 
-// Public route - no auth required
-router.get('/public', controller.getPublicProducts);
+// --- Routes Protégées ---
 
+// POST create new product (handles JSON data)
+router.post('/', auth, productController.createProduct);
 
-// toutes les routes nécessitent le rôle "supplier"
-router.use(auth, authorize('supplier','client'));
+// GET all products for the logged-in supplier
+router.get('/supplier', auth, productController.getProducts);
 
-// Création produit avec upload images 
-router.post('/', upload.array('images'), controller.createProduct);
+// GET all unique categories
+router.get('/categories', productController.getAllCategories);
 
-// Liste produits
-router.get('/', controller.listProducts);
-//liste des categories
-router.get('/categories', controller.getCategories); 
+// POST a new category
+router.post('/categories', auth, productController.addCategory);
 
+// GET products for the client catalog view
+router.get('/client-dashboard/catalog', auth, productController.getProductsForClient);
 
-// Détail produit
-router.get('/:id', controller.getProduct);
+// GET a single product by ID (must be last among GET routes)
+router.get('/:id', auth, productController.getProductById);
 
-// Mise à jour produit avec upload images 
-router.put('/:id', upload.array('images'), controller.updateProduct);
+// PUT update a product by ID
+router.put('/:id', auth, upload.array('images', 10), productController.updateProduct);
+
+// POST to upload images for a specific product
+router.post('/:id/images', auth, upload.array('images', 10), productController.uploadProductImages);
 
 // Ajuster le stock
-router.patch('/:id/stock', controller.updateStock);
+ router.patch('/:id/stock', auth, productController.updateStock);
 
-// Suppression soft
-router.delete('/:id', controller.deleteProduct);
-// get client catalog
-router.get('/client-dashboard/catalog', controller.listProductsForClient);
-
-router.post('/categories',  controller.addCategory); // New endpoint for adding category
+// DELETE a product by ID
+router.delete('/:id', auth, productController.deleteProduct);
 
 module.exports = router;
+

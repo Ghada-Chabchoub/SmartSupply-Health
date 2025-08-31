@@ -57,8 +57,9 @@ exports.getOrders = async (req, res) => {
       limit: parseInt(limit),
       sort: { createdAt: -1 },
       populate: [
-        { path: 'items.product',       select: 'orderNumber items totalAmount status paymentStatus createdAt', // Explicitly select the fields needed },
-         path: 'client', select: 'name email clinicName' }
+        { path: 'items.product', select: 'name' }, // <-- Correctly select only the product name
+                  { path: 'items.product', select: 'name' }, // <-- Correctly select only the product name
+        { path: 'client', select: 'name email clinicName' }
       ]
     };
 
@@ -167,8 +168,8 @@ exports.cancelOrder = async (req, res) => {
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
-        if (order.status !== 'pending') {
-            return res.status(400).json({ message: 'Only pending orders can be cancelled.' });
+        if (!['pending', 'confirmed', 'processing'].includes(order.status)) {
+            return res.status(400).json({ message: 'This order can no longer be cancelled.' });
         }
 
         // Add stock back to products

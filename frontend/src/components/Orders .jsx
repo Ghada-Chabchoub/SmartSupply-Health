@@ -251,7 +251,7 @@ const Orders = () => {
                                             >
                                                 Détails
                                             </button>
-                                            {order.status === 'pending' && (
+                                            {['pending', 'confirmed', 'processing'].includes(order.status) && (
                                                 <button 
                                                     className="btn-cancel"
                                                     onClick={() => cancelOrder(order._id)}
@@ -327,7 +327,7 @@ const Orders = () => {
                         </div>
 
                         <div className="modal-footer">
-                            {selectedOrder.status === 'pending' && (
+                            {['pending', 'confirmed', 'processing'].includes(selectedOrder.status) && (
                                 <button 
                                     className="btn-cancel"
                                     onClick={() => {

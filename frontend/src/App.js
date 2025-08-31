@@ -13,6 +13,7 @@ import NewOrder from './components/NewOrder';
 import SupplierOrders from './components/SupplierOrders';
 import SupplierClients from './components/SupplierClients';
 import ClientInventory from './components/ClientInventory';
+import Chatbot from './components/chatbot/Chatbot'; // <-- AJOUTER CETTE LIGNE
 import './App.css';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
               <Route path="/client-dashboard/stock" element={<ClientInventory />} />
             </Routes>
           </main>
+          <Chatbot /> {/* <-- AJOUTER CETTE LIGNE */}
         </div>
       </CartProvider>
     </NotificationProvider>
