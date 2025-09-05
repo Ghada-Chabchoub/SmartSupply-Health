@@ -1,6 +1,6 @@
 // server.js
 const dotenv = require('dotenv');
-dotenv.config({ path: 'backend/.env' }); // <- DOIT être la première ligne
+dotenv.config(); // <- This will automatically look for a .env file in the current directory
 
 const express = require('express');
 const mongoose = require('mongoose');

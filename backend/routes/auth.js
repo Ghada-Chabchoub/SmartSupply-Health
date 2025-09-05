@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // <-- ADD STRIPE
 const { auth } = require('../middleware/auth');
 const { 
   validateRegister, 
@@ -25,7 +26,7 @@ const generateToken = (id, role) => {
 // @access  Public
 router.post('/register', validateRegister, checkValidation, async (req, res) => {
   try {
-    const { role, email } = req.body;
+    const { role, email, name } = req.body;
 
     if (!['client', 'supplier'].includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
@@ -44,14 +45,26 @@ router.post('/register', validateRegister, checkValidation, async (req, res) => 
 
     let user;
     if (role === 'client') {
-      user = new Client(req.body);
+      // Create a Stripe customer for the new client
+      const customer = await stripe.customers.create({
+        email: email,
+        name: name,
+        description: 'New client for SmartSupply-Health',
+      });
+
+      // Create a new client with the Stripe Customer ID
+      user = new Client({
+        ...req.body,
+        stripeCustomerId: customer.id, // <-- SAVE THE STRIPE ID
+      });
+
     } else if (role === 'supplier') {
       user = new Supplier(req.body);
     }
 
     await user.save();
 
-    const token = generateToken(user._id, role); // inclure le rôle dans le token si nécessaire
+    const token = generateToken(user._id, role);
 
     res.status(201).json({ 
       success: true, 
@@ -61,6 +74,7 @@ router.post('/register', validateRegister, checkValidation, async (req, res) => 
 
   } catch (error) {
     console.error('Registration error:', error);
+    // If there's a Stripe error, it will be caught here as well
     res.status(500).json({ success: false, message: 'Server error during registration' });
   }
 });

@@ -227,11 +227,9 @@ const Register = () => {
                       disabled={loading}
                     >
                       <option value="">Choisir le type</option>
-                      <option value="dentaire">Clinique dentaire</option>
-                      <option value="medicale">Clinique médicale</option>
-                      <option value="hopital">Hôpital</option>
-                      <option value="laboratoire">Laboratoire</option>
-                      <option value="autre">Autre</option>
+                      <option value="clinic">Clinique</option>
+                      <option value="laboratory">Laboratoire</option>
+                      <option value="medical_office">Cabinet Médical</option>
                     </select>
                   </div>
                 </div>

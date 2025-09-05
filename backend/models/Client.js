@@ -10,7 +10,8 @@ const clientSchema = new mongoose.Schema({
   clinicName: { type: String, required: true },
   clinicType: { type: String, enum: ['clinic', 'laboratory', 'medical_office'], required: true },
   address: { type: String, required: true },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  stripeCustomerId: { type: String, sparse: true } // Added for Stripe integration
 }, { timestamps: true });
 
 // Middleware pour hasher le mot de passe avant sauvegarde

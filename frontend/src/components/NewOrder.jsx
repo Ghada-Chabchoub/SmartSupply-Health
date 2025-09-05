@@ -66,20 +66,14 @@ export default function NewOrder() {
     }
   };
 
-  const handlePaymentSuccess = async (orderId, paymentDetails) => {
-    try {
-      setLoading(true);
-      await axiosAuth.post(`/api/payments/pay/${orderId}`, { paymentDetails });
-      setOrderToPay(null);
-      clearCart(); // Vider le panier du contexte
-      setNotification({ message: 'Commande et paiement réussis !', type: 'success' });
-      setTimeout(() => navigate('/client-dashboard/orders'), 1500);
-    } catch (e) {
-      console.error(e);
-      setNotification({ message: 'Erreur lors du traitement du paiement.', type: 'error' });
-    } finally {
-      setLoading(false);
-    }
+  const handlePaymentSuccess = () => {
+    // The PaymentModal now handles the entire payment process.
+    // This function is called only after the payment is successful.
+    setLoading(true);
+    setOrderToPay(null);
+    clearCart(); // Clear the cart from context
+    setNotification({ message: 'Order and payment successful!', type: 'success' });
+    setTimeout(() => navigate('/client-dashboard/orders'), 1500);
   };
 
   const handlePaymentCancel = () => {

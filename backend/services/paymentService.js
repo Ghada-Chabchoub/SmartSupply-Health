@@ -1,22 +1,9 @@
 const Order = require('../models/Order');
 const ClientInventory = require('../models/ClientInventory');
 const Product = require('../models/Product');
-const Client = require('../models/Client'); // Import Client model
-const sendEmail = require('../utils/emailService'); // Import email service
-
-const simulatePaymentGateway = async (amount, paymentDetails) => {
-  console.log(`Processing payment of ${amount}€ with method ${paymentDetails.method}`);
-  return new Promise(resolve => {
-    setTimeout(() => {
-      const isSuccess = Math.random() > 0.1; // 90% success rate
-      resolve({
-        success: isSuccess,
-        transactionId: `txn_${Date.now()}`,
-        message: isSuccess ? 'Payment successful' : 'Payment failed',
-      });
-    }, 1000);
-  });
-};
+const Client = require('../models/Client');
+const sendEmail = require('../utils/emailService');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const createAndPayAutoOrder = async (clientId) => {
   const inventoryItems = await ClientInventory.find({ client: clientId, 'autoOrder.enabled': true }).populate('product');
@@ -24,7 +11,7 @@ const createAndPayAutoOrder = async (clientId) => {
   const itemsToOrder = inventoryItems.filter(item => item.currentStock <= item.reorderPoint && item.reorderQty > 0);
 
   if (itemsToOrder.length === 0) {
-    return { message: 'No items to reorder at this time.' };
+    return { success: true, message: 'No items to reorder at this time.' };
   }
 
   const orderProducts = itemsToOrder.map(item => ({
@@ -56,57 +43,80 @@ const createAndPayAutoOrder = async (clientId) => {
   
   await order.save();
 
-  const autoPaymentDetails = { method: 'saved_card', cardId: 'card_default' };
-  const paymentResult = await simulatePaymentGateway(order.totalAmount, autoPaymentDetails);
+  // --- Stripe Payment Logic ---
+  try {
+    const client = await Client.findById(clientId);
+    if (!client || !client.stripeCustomerId) {
+        throw new Error('Client not found or does not have a Stripe Customer ID.');
+    }
 
-  if (paymentResult.success) {
+    // TODO: You should retrieve the actual PaymentMethod ID from the client's saved payment methods.
+    // For this example, we'll need to get the default payment method for the customer.
+    const paymentMethods = await stripe.paymentMethods.list({
+        customer: client.stripeCustomerId,
+        type: 'card',
+    });
+
+    if (paymentMethods.data.length === 0) {
+        throw new Error('No saved payment method found for this client.');
+    }
+    const paymentMethodId = paymentMethods.data[0].id;
+
+    // Create and confirm a PaymentIntent for an off-session payment
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(order.totalAmount * 100), // Amount in cents
+      currency: 'eur',
+      customer: client.stripeCustomerId,
+      payment_method: paymentMethodId,
+      off_session: true,
+      confirm: true,
+      metadata: { orderId: order._id.toString() },
+    });
+
+    // --- Payment Successful ---
     order.paymentStatus = 'Paid';
     order.status = 'confirmed';
     order.paymentDetails = {
-      method: autoPaymentDetails.method,
-      transactionId: paymentResult.transactionId,
+      method: 'stripe',
+      transactionId: paymentIntent.id,
     };
     await order.save();
 
-    // --- NOUVELLE LOGIQUE ---
-    const client = await Client.findById(clientId);
-
     for (const item of order.items) {
-      // 1. Décrémenter le stock du fournisseur
       await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } });
     }
 
-    // 3. Envoyer l'email de confirmation
-    if (client && client.email) {
-      // Construire la liste des produits pour l'email
+    if (client.email) {
       const productDetailsList = order.items.map(item => {
-        // Retrouver le nom du produit depuis la liste initiale qui a été "populée"
         const inventoryItem = inventoryItems.find(invItem => invItem.product._id.equals(item.product));
-        const productName = inventoryItem ? inventoryItem.product.name : 'Produit inconnu';
-        return `<li>${productName} (Quantité: ${item.quantity})</li>`;
+        const productName = inventoryItem ? inventoryItem.product.name : 'Unknown Product';
+        return `<li>${productName} (Quantity: ${item.quantity})</li>`;
       }).join('');
 
       const emailHtml = `
-        <h1>Bonjour ${client.name},</h1>
-        <p>Votre commande automatique <strong>${order.orderNumber}</strong> a été créée et payée avec succès.</p>
-        <h3>Détails de la commande :</h3>
+        <h1>Hello ${client.name},</h1>
+        <p>Your automatic order <strong>${order.orderNumber}</strong> has been created and paid successfully.</p>
+        <h3>Order Details:</h3>
         <ul>
           ${productDetailsList}
         </ul>
-        <p><strong>Montant total : ${order.totalAmount.toFixed(2)}€</strong></p>
-        <p>Merci pour votre confiance.</p>
+        <p><strong>Total Amount: ${order.totalAmount.toFixed(2)}€</strong></p>
+        <p>Thank you for your trust.</p>
       `;
-      await sendEmail(client.email, 'Confirmation de votre commande automatique', emailHtml);
+      await sendEmail(client.email, 'Confirmation of your automatic order', emailHtml);
     }
-    // --- FIN DE LA NOUVELLE LOGIQUE ---
 
     return { success: true, message: 'Automatic order created and paid successfully.', order };
-  } else {
+
+  } catch (error) {
+    console.error('Stripe automatic payment error:', error);
     order.paymentStatus = 'Failed';
-    order.notes += ' Le paiement automatique a échoué.';
+    order.notes += ` Automatic payment failed: ${error.message}`;
     await order.save();
-    return { success: false, message: 'Automatic order created, but payment failed.', order };
+    return { success: false, message: `Automatic order created, but payment failed: ${error.message}`, order };
   }
 };
 
-module.exports = { createAndPayAutoOrder, simulatePaymentGateway };
+// We no longer need the simulation, but we'll keep the export structure clean.
+// If you have other services, they can be added here.
+module.exports = { createAndPayAutoOrder };
