@@ -5,15 +5,17 @@ const {
     createPaymentIntent,
     updateOrderAfterPayment,
     createAutomaticOrderAndPay,
+    createSetupIntent,
+    getPaymentMethods,
 } = require('../controllers/paymentController');
 
-// Create a payment intent for an order
+// --- Routes for Order Payments ---
 router.post('/create-payment-intent/:orderId', auth, authorize('client'), createPaymentIntent);
-
-// Update order status after a successful payment
 router.post('/update-order-payment-status/:orderId', auth, authorize('client'), updateOrderAfterPayment);
-
-// Trigger automatic order creation and payment
 router.post('/automatic-order', auth, authorize('client'), createAutomaticOrderAndPay);
+
+// --- Routes for Managing Payment Methods ---
+router.get('/payment-methods', auth, authorize('client'), getPaymentMethods);
+router.post('/create-setup-intent', auth, authorize('client'), createSetupIntent);
 
 module.exports = router;

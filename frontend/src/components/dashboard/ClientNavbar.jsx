@@ -18,6 +18,7 @@ const ClientNavbar = () => {
     { name: 'Panier', path: '/client-dashboard/new-order' },
     { name: 'Mes Commandes', path: '/client-dashboard/orders' },
     { name: 'Stock', path: '/client-dashboard/stock' },
+    { name: 'Paiements', path: '/client-dashboard/payment-methods' },
   ];
 
   return (

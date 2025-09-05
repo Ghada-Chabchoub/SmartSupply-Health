@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const ClientInventory = require('../models/ClientInventory');
 const Product = require('../models/Product');
@@ -6,7 +7,10 @@ const sendEmail = require('../utils/emailService');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const createAndPayAutoOrder = async (clientId) => {
-  const inventoryItems = await ClientInventory.find({ client: clientId, 'autoOrder.enabled': true }).populate('product');
+  // Ensure clientId is a valid ObjectId to prevent errors
+  const validClientId = new mongoose.Types.ObjectId(clientId);
+
+  const inventoryItems = await ClientInventory.find({ client: validClientId, 'autoOrder.enabled': true }).populate('product');
   
   const itemsToOrder = inventoryItems.filter(item => item.currentStock <= item.reorderPoint && item.reorderQty > 0);
 
@@ -32,7 +36,7 @@ const createAndPayAutoOrder = async (clientId) => {
 
   const order = new Order({
     orderNumber: 'ORD-' + Date.now(),
-    client: clientId,
+    client: validClientId,
     items: orderProducts,
     totalAmount,
     deliveryAddress,
@@ -45,13 +49,17 @@ const createAndPayAutoOrder = async (clientId) => {
 
   // --- Stripe Payment Logic ---
   try {
-    const client = await Client.findById(clientId);
+    const client = await Client.findById(validClientId);
     if (!client || !client.stripeCustomerId) {
-        throw new Error('Client not found or does not have a Stripe Customer ID.');
+        // This is a critical check for clients created before Stripe integration
+        console.warn(`Skipping auto-order for client ${clientId}: Missing Stripe Customer ID.`);
+        order.paymentStatus = 'Failed';
+        order.notes += ' Automatic payment skipped: Client is not configured for Stripe payments.';
+        await order.save();
+        return { success: false, message: 'Client not configured for Stripe payments.' };
     }
 
-    // TODO: You should retrieve the actual PaymentMethod ID from the client's saved payment methods.
-    // For this example, we'll need to get the default payment method for the customer.
+    // Retrieve the client's saved payment methods from Stripe
     const paymentMethods = await stripe.paymentMethods.list({
         customer: client.stripeCustomerId,
         type: 'card',
@@ -117,6 +125,4 @@ const createAndPayAutoOrder = async (clientId) => {
   }
 };
 
-// We no longer need the simulation, but we'll keep the export structure clean.
-// If you have other services, they can be added here.
 module.exports = { createAndPayAutoOrder };

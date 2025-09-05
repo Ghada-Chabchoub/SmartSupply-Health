@@ -19,7 +19,7 @@ const ClientDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const ordersResponse = await api.get('/orders');
+        const ordersResponse = await api.get('/orders/my-orders');
         const orders = ordersResponse.data.data || [];
 
         const pendingOrders = orders.filter(order =>

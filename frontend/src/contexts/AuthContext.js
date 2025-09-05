@@ -31,7 +31,6 @@ const authReducer = (state, action) => {
         error: null
       };
     case 'REGISTER_SUCCESS':
-      // Pour le register, on ne stocke pas le token immédiatement
       return {
         ...state,
         loading: false,
@@ -95,7 +94,8 @@ export const AuthProvider = ({ children }) => {
           dispatch({ type: 'LOGOUT' });
         }
       } else {
-        dispatch({ type: 'LOGOUT' });
+        // To prevent screen flicker, we should dispatch something to indicate loading is finished
+        dispatch({ type: 'LOAD_USER', payload: null });
       }
     };
 
@@ -110,32 +110,24 @@ export const AuthProvider = ({ children }) => {
         password,
         role
       });
-      console.log('Response complète:', res.data); // Debug log
       const { user, token } = res.data.data;
-      console.log('User data:', user); // Debug log
-      console.log('Token:', token); // Debug log
+      
+      // This is redundant as the reducer does it, but safe
       localStorage.setItem('token', token);
 
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
 
-      // Décoder le token pour obtenir le rôle
       const decoded = jwt_decode(token);
-      console.log('Token décodé:', decoded); // Debug log
       
-      // Redirection basée sur le rôle du token
       if (decoded.role === 'client') {
-        console.log('Redirection vers client dashboard'); // Debug log
         navigate('/client-dashboard');
       } else if (decoded.role === 'supplier') {
-        console.log('Redirection vers supplier dashboard'); // Debug log
         navigate('/supplier-dashboard');
       } else {
-        console.error('Rôle inconnu:', decoded.role);
-        navigate('/'); // Fallback vers la page d'accueil
+        navigate('/');
       }
 
     } catch (err) {
-      console.error('Erreur de connexion:', err); // Debug log
       const errorMessage = err.response?.data?.message || 'Email ou mot de passe incorrect';
       dispatch({ type: 'LOGIN_FAILURE', payload: errorMessage });
     }
@@ -147,7 +139,6 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post('http://localhost:5000/api/auth/register', userData);
       dispatch({ type: 'REGISTER_SUCCESS', payload: response.data.data });
       
-      // Redirection vers la page de login après inscription réussie
       navigate('/login');
       return { success: true };
     } catch (error) {
@@ -159,6 +150,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      // This call might fail if token is already invalid, but we log out anyway
       await axios.post('http://localhost:5000/api/auth/logout');
     } catch (error) {
       console.error('Logout error:', error);
@@ -182,7 +174,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!state.loading && children}
     </AuthContext.Provider>
   );
 };
