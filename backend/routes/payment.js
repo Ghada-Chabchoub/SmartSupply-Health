@@ -7,6 +7,7 @@ const {
     createAutomaticOrderAndPay,
     createSetupIntent,
     getPaymentMethods,
+    detachPaymentMethod, // <-- Ajout de la nouvelle fonction
 } = require('../controllers/paymentController');
 
 // --- Routes for Order Payments ---
@@ -17,5 +18,7 @@ router.post('/automatic-order', auth, authorize('client'), createAutomaticOrderA
 // --- Routes for Managing Payment Methods ---
 router.get('/payment-methods', auth, authorize('client'), getPaymentMethods);
 router.post('/create-setup-intent', auth, authorize('client'), createSetupIntent);
+// Ajout de la route pour supprimer une carte
+router.delete('/payment-methods/:paymentMethodId', auth, authorize('client'), detachPaymentMethod);
 
 module.exports = router;

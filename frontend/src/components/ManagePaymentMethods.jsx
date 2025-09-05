@@ -3,7 +3,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import api from '../services/api';
 import ClientNavbar from './dashboard/ClientNavbar';
-import '../style/ProductForm.css'; // Re-using some styles for consistency
+import '../style/ProductForm.css'; // Conserver le style cohérent
 
 // --- AddCardForm Sub-component ---
 const AddCardForm = ({ clientSecret, onSuccess, onError }) => {
@@ -53,7 +53,7 @@ const AddCardForm = ({ clientSecret, onSuccess, onError }) => {
     <form onSubmit={handleSubmit} className="stripe-form">
       <CardElement options={CARD_ELEMENT_OPTIONS} />
       <button type="submit" disabled={!stripe || isProcessing} className="auth-button" style={{marginTop: '20px'}}>
-        {isProcessing ? 'Saving...' : 'Save Card'}
+        {isProcessing ? 'Enregistrement...' : 'Enregistrer la carte'}
       </button>
     </form>
   );
@@ -80,7 +80,7 @@ const ManagePaymentMethods = () => {
         setStripePromise(loadStripe(intentRes.data.publishableKey));
       }
     } catch (err) {
-      setError('Failed to load payment details. Please try again.');
+      setError('Impossible de charger les détails de paiement. Veuillez réessayer.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -96,7 +96,22 @@ const ManagePaymentMethods = () => {
         const cardsRes = await api.get('/payments/payment-methods');
         setSavedCards(cardsRes.data);
     } catch (err) {
-        console.error("Could not refresh cards list", err);
+        console.error("Impossible de rafraîchir la liste des cartes", err);
+    }
+  }
+
+  // --- RESTAURATION DE LA FONCTION DE SUPPRESSION ---
+  const handleDeleteCard = async (paymentMethodId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette carte ?')) {
+        return;
+    }
+    try {
+        await api.delete(`/payments/payment-methods/${paymentMethodId}`);
+        setNotification('Carte supprimée avec succès !');
+        refreshCards(); // Rafraîchir la liste
+    } catch (err) {
+        setError('La suppression de la carte a échoué. Veuillez réessayer.');
+        console.error('Delete card error:', err);
     }
   }
 
@@ -104,23 +119,30 @@ const ManagePaymentMethods = () => {
     <div className="product-form-container">
       <ClientNavbar />
       <div className="product-form-card">
-        <h2 className="product-form-title">Manage Payment Methods</h2>
+        <h2 className="product-form-title">Gérer les moyens de paiement</h2>
         
         {error && <div className="auth-error">{error}</div>}
         {notification && <div className="auth-success">{notification}</div>}
 
         <div className="saved-cards-section">
-          <h3>Your Saved Cards</h3>
-          {loading && <p>Loading cards...</p>}
+          <h3>Vos cartes enregistrées</h3>
+          {loading && <p>Chargement...</p>}
           {!loading && savedCards.length === 0 && (
-            <p>You have no saved payment methods.</p>
+            <p>Vous n'avez aucun moyen de paiement enregistré.</p>
           )}
           {!loading && savedCards.length > 0 && (
-            <ul className="saved-cards-list">
+            <ul className="saved-cards-list" style={{listStyle: 'none', padding: 0}}>
               {savedCards.map(card => (
-                <li key={card.id} className="saved-card-item">
-                  <span>{card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} ending in {card.last4}</span>
-                  <span>Expires {card.exp_month}/{card.exp_year}</span>
+                <li key={card.id} className="saved-card-item" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', border: '1px solid #eee', borderRadius: '5px', marginBottom: '10px'}}>
+                  <div>
+                    <span>{card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} se terminant par {card.last4}</span>
+                    <br />
+                    <span style={{fontSize: '0.8em', color: '#666'}}>Expire le {card.exp_month}/{card.exp_year}</span>
+                  </div>
+                  {/* --- RESTAURATION DU BOUTON SUPPRIMER --- */}
+                  <button onClick={() => handleDeleteCard(card.id)} className="btn btn-danger" style={{padding: '5px 10px', fontSize: '0.8em'}}>
+                    Supprimer
+                  </button>
                 </li>
               ))}
             </ul>
@@ -130,21 +152,21 @@ const ManagePaymentMethods = () => {
         <hr className="form-divider" />
 
         <div className="add-card-section">
-          <h3>Add a New Card</h3>
-          <p>Your card will be securely saved for future automatic payments.</p>
+          <h3>Ajouter une nouvelle carte</h3>
+          <p>Votre carte sera enregistrée de manière sécurisée pour les futurs paiements.</p>
           {clientSecret && stripePromise ? (
             <Elements stripe={stripePromise}>
               <AddCardForm 
                 clientSecret={clientSecret}
                 onSuccess={() => {
-                  setNotification('Card saved successfully!');
+                  setNotification('Carte enregistrée avec succès !');
                   refreshCards();
                 }} 
                 onError={setError}
               />
             </Elements>
           ) : (
-            <p>Loading payment form...</p>
+            <p>Chargement du formulaire...</p>
           )}
         </div>
       </div>

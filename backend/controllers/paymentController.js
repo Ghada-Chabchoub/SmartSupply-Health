@@ -114,3 +114,14 @@ exports.getPaymentMethods = async (req, res) => {
         res.status(500).send('Server error');
     }
 };
+
+exports.detachPaymentMethod = async (req, res) => {
+    const { paymentMethodId } = req.params;
+    try {
+        const paymentMethod = await stripe.paymentMethods.detach(paymentMethodId);
+        res.json({ success: true, message: 'Payment method detached successfully.', paymentMethod });
+    } catch (error) {
+        console.error('Error detaching payment method:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
