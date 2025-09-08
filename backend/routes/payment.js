@@ -7,7 +7,7 @@ const {
     createAutomaticOrderAndPay,
     createSetupIntent,
     getPaymentMethods,
-    detachPaymentMethod, // <-- Ajout de la nouvelle fonction
+    detachPaymentMethod, 
 } = require('../controllers/paymentController');
 
 // --- Routes for Order Payments ---
