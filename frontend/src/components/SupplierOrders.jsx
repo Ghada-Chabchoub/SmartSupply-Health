@@ -95,10 +95,8 @@ const SupplierOrders = () => {
 
     const getStatusBadge = (status) => {
         const statusConfig = {
-            pending: { label: 'En attente', class: 'status-pending' },
             confirmed: { label: 'Confirmée', class: 'status-confirmed' },
             processing: { label: 'En traitement', class: 'status-processing' },
-            shipped: { label: 'Expédiée', class: 'status-shipped' },
             delivered: { label: 'Livrée', class: 'status-delivered' },
             cancelled: { label: 'Annulée', class: 'status-cancelled' }
         };
@@ -161,12 +159,6 @@ const SupplierOrders = () => {
                     onClick={() => setFilter('all')}
                 >
                     Toutes
-                </button>
-                <button 
-                    className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
-                    onClick={() => setFilter('pending')}
-                >
-                    En attente
                 </button>
                 <button 
                     className={`filter-btn ${filter === 'confirmed' ? 'active' : ''}`}
@@ -260,11 +252,10 @@ const SupplierOrders = () => {
                                                 value={order.status}
                                                 onChange={(e) => updateOrderStatus(order._id, e.target.value)}
                                                 className="status-select"
+                                                disabled={order.status === 'delivered' || order.status === 'cancelled'}
                                             >
-                                                <option value="pending">En attente</option>
                                                 <option value="confirmed">Confirmée</option>
                                                 <option value="processing">En traitement</option>
-                                                <option value="shipped">Expédiée</option>
                                                 <option value="delivered">Livrée</option>
                                                 <option value="cancelled">Annulée</option>
                                             </select>
@@ -347,11 +338,10 @@ const SupplierOrders = () => {
                                     closeModal();
                                 }}
                                 className="status-select"
+                                disabled={selectedOrder.status === 'delivered' || selectedOrder.status === 'cancelled'}
                             >
-                                <option value="pending">En attente</option>
                                 <option value="confirmed">Confirmée</option>
                                 <option value="processing">En traitement</option>
-                                <option value="shipped">Expédiée</option>
                                 <option value="delivered">Livrée</option>
                                 <option value="cancelled">Annulée</option>
                             </select>

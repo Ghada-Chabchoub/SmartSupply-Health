@@ -76,12 +76,11 @@ const Orders = () => {
 
     const getStatusBadge = (status) => {
         const statusConfig = {
-            pending: { label: 'En attente', class: 'status-pending' },
+            cancelled: { label: 'Annulée', class: 'status-cancelled' },
+
             confirmed: { label: 'Confirmée', class: 'status-confirmed' },
             processing: { label: 'En traitement', class: 'status-processing' },
-            shipped: { label: 'Expédiée', class: 'status-shipped' },
-            delivered: { label: 'Livrée', class: 'status-delivered' },
-            cancelled: { label: 'Annulée', class: 'status-cancelled' }
+            delivered: { label: 'Livrée', class: 'status-delivered' }
         };
         const config = statusConfig[status] || { label: status, class: 'status-unknown' };
         return <span className={`status-badge ${config.class}`}>{config.label}</span>;
@@ -134,12 +133,6 @@ const Orders = () => {
                     onClick={() => setFilter('all')}
                 >
                     Toutes
-                </button>
-                <button 
-                    className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
-                    onClick={() => setFilter('pending')}
-                >
-                    En attente
                 </button>
                 <button 
                     className={`filter-btn ${filter === 'confirmed' ? 'active' : ''}`}
@@ -199,7 +192,7 @@ const Orders = () => {
                                                     Payer
                                                 </button>
                                             )}
-                                            {['pending', 'confirmed'].includes(order.status) && (
+                                            {['confirmed', 'processing'].includes(order.status) && (
                                                 <button className="btn-cancel" onClick={() => cancelOrder(order._id)}>Annuler</button>
                                             )}
                                         </div>
@@ -281,7 +274,7 @@ const Orders = () => {
                                     Payer la commande
                                 </button>
                             )}
-                            {['pending', 'confirmed', 'processing'].includes(selectedOrder.status) && (
+                            {['confirmed', 'processing'].includes(selectedOrder.status) && (
                                 <button 
                                     className="btn-cancel"
                                     onClick={() => {

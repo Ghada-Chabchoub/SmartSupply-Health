@@ -3,7 +3,7 @@ const Product = require('../models/Product');
 
 const generateOrderNumber = async () => {
   const count = await Order.countDocuments();
-  return `CMD${String(count + 1).padStart(6, '0')}`;
+  return `CMD-${String(count + 1).padStart(6, '0')}`;
 };
 
 const createOrder = async (orderData) => {
@@ -29,11 +29,18 @@ const createOrder = async (orderData) => {
     totalAmount,
     deliveryAddress,
     notes,
-    status: 'pending',
+    status: 'confirmed',
     paymentStatus: 'Pending',
   });
 
   await order.save();
+
+  // Decrease stock for each product
+  for (const item of products) {
+    await Product.findByIdAndUpdate(item.product, {
+      $inc: { stock: -item.quantity }
+    });
+  }
 
   return order;
 };

@@ -1,6 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // <-- ADD STRIPE
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const crypto = require('crypto');
+const sendEmail = require('../utils/emailService');
 const { auth } = require('../middleware/auth');
 const { 
   validateRegister, 
@@ -203,6 +205,80 @@ router.put('/profile', auth, async (req, res) => {
       success: false,
       message: 'Server error during profile update'
     });
+  }
+});
+
+// @route   POST /api/auth/forgot-password
+// @desc    Send password reset code
+// @access  Public
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email, role } = req.body;
+    if (!['client', 'supplier'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role' });
+    }
+
+    const Model = role === 'client' ? Client : Supplier;
+    const user = await Model.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const resetToken = crypto.randomBytes(3).toString('hex').toUpperCase();
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 900000; // 15 minutes
+
+    await user.save();
+
+    const subject = 'Your Password Reset Code';
+    const html = `<p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>
+                  <p>Your verification code is: <strong>${resetToken}</strong></p>
+                  <p>This code will expire in 15 minutes.</p>
+                  <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>`;
+
+    await sendEmail(user.email, subject, html);
+
+    res.json({ success: true, message: 'A verification code has been sent to your email.' });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/reset-password
+// @desc    Reset password with verification code
+// @access  Public
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, role, token, password } = req.body;
+    if (!['client', 'supplier'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role' });
+    }
+
+    const Model = role === 'client' ? Client : Supplier;
+    const user = await Model.findOne({
+      email,
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification code.' });
+    }
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.json({ success: true, message: 'Password has been reset successfully.' });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

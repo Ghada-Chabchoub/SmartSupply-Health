@@ -41,7 +41,12 @@ exports.updateInventoryItem = async (req, res) => {
     }
 
     const updatedItem = await item.save();
-    res.json(updatedItem);
+    
+    // Re-populate the product details to ensure the full product object is returned
+    const populatedItem = await ClientInventory.findById(updatedItem._id)
+      .populate('product', 'name reference category images price');
+
+    res.json(populatedItem);
   } catch (error) {
     console.error('Error updating inventory item:', error);
     res.status(500).json({ message: 'Server error' });

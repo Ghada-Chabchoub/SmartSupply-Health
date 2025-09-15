@@ -15,6 +15,8 @@ import SupplierClients from './components/SupplierClients';
 import ClientInventory from './components/ClientInventory';
 import ManagePaymentMethods from './components/ManagePaymentMethods'; // <-- IMPORT
 import Chatbot from './components/chatbot/Chatbot'; // <-- AJOUTER CETTE LIGNE
+import Profile from './components/Profile';
+import ForgotPassword from './components/auth/ForgotPassword';
 import './App.css';
 
 function App() {
@@ -27,8 +29,10 @@ function App() {
               {/* ... routes ... */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/client-dashboard" element={<ClientDashboard />} />
               <Route path="/supplier-dashboard" element={<SupplierDashboard />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/supplier-dashboard/catalogue" element={<ProductsPage />} />
               <Route path="/client-dashboard/catalog" element={<ClientCatalog />} />

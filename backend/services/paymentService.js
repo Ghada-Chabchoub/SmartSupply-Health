@@ -7,31 +7,51 @@ const sendEmail = require('../utils/emailService');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const createAndPayAutoOrder = async (clientId) => {
-  // Ensure clientId is a valid ObjectId to prevent errors
   const validClientId = new mongoose.Types.ObjectId(clientId);
 
   const inventoryItems = await ClientInventory.find({ client: validClientId, 'autoOrder.enabled': true }).populate('product');
   
-  const itemsToOrder = inventoryItems.filter(item => item.currentStock <= item.reorderPoint && item.reorderQty > 0);
+  const itemsToOrderRaw = inventoryItems.filter(item => item.currentStock <= item.reorderPoint && item.reorderQty > 0);
 
-  if (itemsToOrder.length === 0) {
+  if (itemsToOrderRaw.length === 0) {
     return { success: true, message: 'No items to reorder at this time.' };
   }
 
-  const orderProducts = itemsToOrder.map(item => ({
-    product: item.product._id,
-    quantity: item.reorderQty,
-    unitPrice: item.product.price,
-    totalPrice: item.product.price * item.reorderQty,
-  }));
+  const orderProducts = [];
+  const adjustmentNotes = [];
+
+  for (const item of itemsToOrderRaw) {
+    const product = item.product;
+    if (!product || product.stock <= 0) {
+      continue; // Skip if product doesn't exist or is out of stock
+    }
+
+    let orderQty = item.reorderQty;
+    if (orderQty > product.stock) {
+      orderQty = product.stock; // Adjust quantity to available stock
+      adjustmentNotes.push(`La quantité pour ${product.name} a été ajustée à ${orderQty} en raison du stock disponible.`);
+    }
+
+    orderProducts.push({
+      product: product._id,
+      quantity: orderQty,
+      unitPrice: product.price,
+      totalPrice: product.price * orderQty,
+    });
+  }
+
+  if (orderProducts.length === 0) {
+    return { success: true, message: 'No items to reorder as all eligible products are out of stock.' };
+  }
 
   const totalAmount = orderProducts.reduce((sum, p) => sum + p.totalPrice, 0);
   
+  const client = await Client.findById(validClientId);
   const deliveryAddress = {
-    street: 'Auto-order default street',
-    city: 'Default City',
-    postalCode: '00000',
-    country: 'Default Country',
+    street: client.address || 'N/A',
+    city: 'N/A',
+    postalCode: 'N/A',
+    country: 'N/A',
   };
 
   const order = new Order({
@@ -41,7 +61,7 @@ const createAndPayAutoOrder = async (clientId) => {
     totalAmount,
     deliveryAddress,
     notes: 'Commande automatique générée par le système.',
-    status: 'pending',
+    status: 'confirmed',
     paymentStatus: 'Pending',
   });
   
@@ -49,17 +69,10 @@ const createAndPayAutoOrder = async (clientId) => {
 
   // --- Stripe Payment Logic ---
   try {
-    const client = await Client.findById(validClientId);
     if (!client || !client.stripeCustomerId) {
-        // This is a critical check for clients created before Stripe integration
-        console.warn(`Skipping auto-order for client ${clientId}: Missing Stripe Customer ID.`);
-        order.paymentStatus = 'Failed';
-        order.notes += ' Automatic payment skipped: Client is not configured for Stripe payments.';
-        await order.save();
-        return { success: false, message: 'Client not configured for Stripe payments.' };
+        throw new Error('Client is not configured for Stripe payments.');
     }
 
-    // Retrieve the client's saved payment methods from Stripe
     const paymentMethods = await stripe.paymentMethods.list({
         customer: client.stripeCustomerId,
         type: 'card',
@@ -70,9 +83,8 @@ const createAndPayAutoOrder = async (clientId) => {
     }
     const paymentMethodId = paymentMethods.data[0].id;
 
-    // Create and confirm a PaymentIntent for an off-session payment
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(order.totalAmount * 100), // Amount in cents
+      amount: Math.round(order.totalAmount * 100),
       currency: 'eur',
       customer: client.stripeCustomerId,
       payment_method: paymentMethodId,
@@ -81,9 +93,7 @@ const createAndPayAutoOrder = async (clientId) => {
       metadata: { orderId: order._id.toString() },
     });
 
-    // --- Payment Successful ---
     order.paymentStatus = 'Paid';
-    order.status = 'confirmed';
     order.paymentDetails = {
       method: 'stripe',
       transactionId: paymentIntent.id,
@@ -98,20 +108,25 @@ const createAndPayAutoOrder = async (clientId) => {
       const productDetailsList = order.items.map(item => {
         const inventoryItem = inventoryItems.find(invItem => invItem.product._id.equals(item.product));
         const productName = inventoryItem ? inventoryItem.product.name : 'Unknown Product';
-        return `<li>${productName} (Quantity: ${item.quantity})</li>`;
+        return `<li>${productName} (Quantité: ${item.quantity})</li>`;
       }).join('');
 
+      const adjustmentHtml = adjustmentNotes.length > 0 
+        ? `<h3>Notes importantes :</h3><p>${adjustmentNotes.join('<br>')}</p>` 
+        : '';
+
       const emailHtml = `
-        <h1>Hello ${client.name},</h1>
-        <p>Your automatic order <strong>${order.orderNumber}</strong> has been created and paid successfully.</p>
-        <h3>Order Details:</h3>
+        <h1>Bonjour ${client.name},</h1>
+        <p>Votre commande automatique <strong>${order.orderNumber}</strong> a été créée et payée avec succès.</p>
+        ${adjustmentHtml}
+        <h3>Détails de la commande :</h3>
         <ul>
           ${productDetailsList}
         </ul>
-        <p><strong>Total Amount: ${order.totalAmount.toFixed(2)}€</strong></p>
-        <p>Thank you for your trust.</p>
+        <p><strong>Montant total : ${order.totalAmount.toFixed(2)}€</strong></p>
+        <p>Merci de votre confiance.</p>
       `;
-      await sendEmail(client.email, 'Confirmation of your automatic order', emailHtml);
+      await sendEmail(client.email, 'Confirmation de votre commande automatique', emailHtml);
     }
 
     return { success: true, message: 'Automatic order created and paid successfully.', order };
@@ -121,6 +136,7 @@ const createAndPayAutoOrder = async (clientId) => {
     order.paymentStatus = 'Failed';
     order.notes += ` Automatic payment failed: ${error.message}`;
     await order.save();
+    // Do not restock here, as the order was placed and stock was reserved.
     return { success: false, message: `Automatic order created, but payment failed: ${error.message}`, order };
   }
 };

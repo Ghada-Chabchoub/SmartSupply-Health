@@ -127,7 +127,7 @@ exports.getOrderById = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { status } = req.body;
-        if (!['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
+        if (!['confirmed', 'processing', 'delivered', 'cancelled'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status' });
         }
         const order = await Order.findById(req.params.id)
@@ -135,6 +135,9 @@ exports.updateOrderStatus = async (req, res) => {
             .populate('items.product', 'name');
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
+        }
+        if (order.status === 'delivered' || order.status === 'cancelled') {
+            return res.status(400).json({ message: 'Cannot change status of a delivered or cancelled order.' });
         }
         order.status = status;
         await order.save();
@@ -177,7 +180,7 @@ exports.cancelOrder = async (req, res) => {
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
-        if (!['pending', 'confirmed', 'processing'].includes(order.status)) {
+        if (!['confirmed', 'processing'].includes(order.status)) {
             return res.status(400).json({ message: 'This order can no longer be cancelled.' });
         }
         for (const item of order.items) {
