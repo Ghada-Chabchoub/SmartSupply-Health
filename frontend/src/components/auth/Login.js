@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './Auth.css';
@@ -9,18 +9,58 @@ const Login = () => {
     password: '',
     role: '' 
   });
+  const [formErrors, setFormErrors] = useState({});
 
   const { login, loading, error, clearError } = useAuth();
 
+  const validateField = useCallback((name, value) => {
+    switch (name) {
+      case 'email':
+        if (!value.trim()) return "L'email est requis.";
+        if (!/\S+@\S+\.\S+/.test(value)) return 'L\'email doit inclure un "@".';
+        break;
+      case 'password':
+        if (!value.trim()) return 'Le mot de passe est requis.';
+        break;
+      default:
+        break;
+    }
+    return null;
+  }, []);
+
   const handleChange = (e) => {
     if (error) clearError();
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    setFormData(prevData => ({ ...prevData, [name]: value }));
+
+    const errorMessage = validateField(name, value);
+    setFormErrors(prevErrors => ({
+      ...prevErrors,
+      [name]: errorMessage
+    }));
+  };
+
+  const validateAllFields = () => {
+    const errors = {};
+    const emailError = validateField('email', formData.email);
+    if (emailError) errors.email = emailError;
+
+    const passwordError = validateField('password', formData.password);
+    if (passwordError) errors.password = passwordError;
+    
+    if (!formData.role) {
+      errors.role = 'Veuillez sélectionner un rôle.';
+    }
+    return errors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.role) {
+    const errors = validateAllFields();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
@@ -47,7 +87,7 @@ const Login = () => {
           <p className="auth-subtitle">Accédez à votre espace personnel</p>
         </div>
         
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {error && (
             <div className="auth-error">
               <svg viewBox="0 0 20 20" fill="currentColor">
@@ -70,10 +110,11 @@ const Login = () => {
                 onChange={handleChange}
                 required
                 placeholder="votre@email.com"
-                className="auth-input"
+                className={`auth-input ${formErrors.email ? 'is-invalid' : ''}`}
                 disabled={loading}
               />
             </div>
+            {formErrors.email && <p className="auth-error-text">{formErrors.email}</p>}
           </div>
 
           <div className="auth-form-group">
@@ -89,10 +130,11 @@ const Login = () => {
                 onChange={handleChange}
                 required
                 placeholder="••••••••"
-                className="auth-input"
+                className={`auth-input ${formErrors.password ? 'is-invalid' : ''}`}
                 disabled={loading}
               />
             </div>
+            {formErrors.password && <p className="auth-error-text">{formErrors.password}</p>}
           </div>
 
           <div className="auth-form-group">
@@ -126,11 +168,12 @@ const Login = () => {
                 <span className="auth-radio-text">Fournisseur</span>
               </label>
             </div>
+            {formErrors.role && <p className="auth-error-text">{formErrors.role}</p>}
           </div>
 
           <button 
             type="submit"
-            disabled={loading || !formData.role}
+            disabled={loading}
             className="auth-button auth-button-primary"
           >
             {loading ? (

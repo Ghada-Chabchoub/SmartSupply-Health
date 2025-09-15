@@ -497,3 +497,20 @@
   }
 }
 
+.auth-error-text {
+  color: var(--danger-red);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  min-height: 1.25rem; /* Reserve space to prevent layout shifts */
+}
+
+.auth-input-condition {
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  margin-top: 0.5rem;
+}
+
+.auth-input.is-invalid {
+  border-color: var(--danger-red);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}

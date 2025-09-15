@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useMemo, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../style/NewOrder.css';
@@ -14,12 +14,7 @@ export default function NewOrder() {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [isCheckoutVisible, setCheckoutVisible] = useState(false);
-  const [deliveryAddress, setDeliveryAddress] = useState({
-    street: '',
-    city: '',
-    postalCode: '',
-    country: '',
-  });
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [orderToPay, setOrderToPay] = useState(null);
   const navigate = useNavigate();
@@ -32,14 +27,30 @@ export default function NewOrder() {
     });
   }, [token]);
 
+  useEffect(() => {
+    const fetchClientAddress = async () => {
+      try {
+        const response = await axiosAuth.get('/api/auth/me');
+        const user = response.data.data.user;
+        if (user && user.address) {
+          setDeliveryAddress(user.address);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération de l'adresse du client:", error);
+      }
+    };
+
+    fetchClientAddress();
+  }, [axiosAuth]);
+
   // 3. Le calcul du total utilise maintenant le panier du contexte
   const totalAmount = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [cart]);
 
   const handleConfirmOrder = async () => {
-    if (Object.values(deliveryAddress).some(field => !field.trim())) {
-      setNotification({ message: 'Veuillez remplir tous les champs de l\'adresse.', type: 'error' });
+    if (!deliveryAddress.trim()) {
+      setNotification({ message: 'Veuillez remplir le champ de l\'adresse.', type: 'error' });
       return;
     }
 
@@ -51,7 +62,12 @@ export default function NewOrder() {
           quantity: item.quantity,
           price: item.price,
         })),
-        deliveryAddress,
+        deliveryAddress: {
+          street: deliveryAddress,
+          city: 'N/A',
+          postalCode: 'N/A',
+          country: 'N/A',
+        },
         notes: orderNotes,
         totalAmount,
       };
@@ -152,12 +168,12 @@ export default function NewOrder() {
             <div className="delivery-section">
               <h3>Adresse de Livraison</h3>
               <form className="address-form">
-                <input type="text" placeholder="Rue et numéro" value={deliveryAddress.street} onChange={e => setDeliveryAddress(s => ({ ...s, street: e.target.value }))} />
-                <div className="address-row">
-                  <input type="text" placeholder="Ville" value={deliveryAddress.city} onChange={e => setDeliveryAddress(s => ({ ...s, city: e.target.value }))} />
-                  <input type="text" placeholder="Code Postal" value={deliveryAddress.postalCode} onChange={e => setDeliveryAddress(s => ({ ...s, postalCode: e.target.value }))} />
-                </div>
-                <input type="text" placeholder="Pays" value={deliveryAddress.country} onChange={e => setDeliveryAddress(s => ({ ...s, country: e.target.value }))} />
+                <input 
+                  type="text" 
+                  placeholder="Adresse complète" 
+                  value={deliveryAddress} 
+                  onChange={e => setDeliveryAddress(e.target.value)} 
+                />
               </form>
             </div>
             <div className="notes-section">

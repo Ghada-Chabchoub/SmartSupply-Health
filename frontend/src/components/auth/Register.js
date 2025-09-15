@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './Auth.css';
@@ -15,16 +15,81 @@ const Register = () => {
     address: '',
     companyName: ''
   });
+  const [formErrors, setFormErrors] = useState({});
 
   const { register, loading, error, clearError } = useAuth();
 
+  const validateField = useCallback((name, value, currentData) => {
+    switch (name) {
+      case 'name':
+        if (!value.trim()) return 'Le nom complet est requis.';
+        if (!/^[a-zA-Z\s]+$/.test(value)) return 'Le nom complet ne doit contenir que des lettres.';
+        break;
+      case 'email':
+        if (!value.trim()) return "L'email est requis.";
+        if (!/\S+@\S+\.\S+/.test(value)) return 'L\'email doit inclure un "@".';
+        break;
+      case 'phone':
+        if (!value.trim()) return 'Le téléphone est requis.';
+        if (!/^[0-9]+$/.test(value)) return 'Le téléphone ne doit contenir que des chiffres.';
+        break;
+      case 'password':
+        if (!value.trim()) return 'Le mot de passe est requis.';
+        if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(value)) return 'Au moins 6 caractères, une majuscule, une minuscule et un chiffre.';
+        break;
+      case 'clinicName':
+        if (currentData.role === 'client' && !value.trim()) return 'Le nom de la clinique est requis.';
+        if (currentData.role === 'client' && value.trim() && !/^[a-zA-Z\s]+$/.test(value)) return 'Le nom de la clinique ne doit contenir que des lettres et des espaces.';
+        break;
+      case 'address':
+        if (currentData.role === 'client' && !value.trim()) return "L'adresse est requise.";
+        break;
+      case 'clinicType':
+        if (currentData.role === 'client' && !value.trim()) return 'Le type de clinique est requis.';
+        break;
+      case 'companyName':
+        if (currentData.role === 'supplier' && !value.trim()) return "Le nom de l'entreprise est requis.";
+        break;
+      default:
+        break;
+    }
+    return null;
+  }, []);
+
   const handleChange = (e) => {
     if (error) clearError();
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    setFormData(prevData => {
+      const updatedData = { ...prevData, [name]: value };
+      const errorMessage = validateField(name, value, updatedData);
+      setFormErrors(prevErrors => ({
+        ...prevErrors,
+        [name]: errorMessage
+      }));
+      return updatedData;
+    });
+  };
+
+  const validateAllFields = () => {
+    const errors = {};
+    for (const key in formData) {
+      const errorMessage = validateField(key, formData[key], formData);
+      if (errorMessage) {
+        errors[key] = errorMessage;
+      }
+    }
+    return errors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const errors = validateAllFields();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
 
     if (!formData.role) {
       return;
@@ -56,7 +121,7 @@ const Register = () => {
           <p className="auth-subtitle">Créez votre compte professionnel</p>
         </div>
         
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" noValidate>
           {error && (
             <div className="auth-error">
               <svg viewBox="0 0 20 20" fill="currentColor">
@@ -66,7 +131,6 @@ const Register = () => {
             </div>
           )}
 
-          {/* Type d'utilisateur */}
           <div className="auth-form-group">
             <label className="auth-label">Vous êtes :</label>
             <div className="auth-radio-group">
@@ -81,34 +145,11 @@ const Register = () => {
                   className="auth-radio"
                 />
                 <span className="auth-radio-custom"></span>
-                <span className="auth-radio-text">Client </span>
-                 
-
+                <span className="auth-radio-text">Client</span>
               </label>
-              {/* AEFFACER
-               
-              <label className="auth-radio-label">
-                <input
-                  type="radio"
-                  name="role"
-                  value="supplier"
-                  checked={formData.role === 'supplier'}
-                  onChange={handleChange}
-                  disabled={loading}
-                  className="auth-radio"
-                />
-                <span className="auth-radio-custom"></span>
-                <span className="auth-radio-text">Supp </span>
-                 
-
-              </label> 
-
-              */}
-
             </div>
           </div>
 
-          {/* Informations générales */}
           <div className="auth-form-row">
             <div className="auth-form-group">
               <label className="auth-label">Nom complet</label>
@@ -123,10 +164,11 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   placeholder="Nom complet"
-                  className="auth-input"
+                  className={`auth-input ${formErrors.name ? 'is-invalid' : ''}`}
                   disabled={loading}
                 />
               </div>
+              {formErrors.name && <p className="auth-error-text">{formErrors.name}</p>}
             </div>
 
             <div className="auth-form-group">
@@ -142,10 +184,11 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   placeholder="Numéro de téléphone"
-                  className="auth-input"
+                  className={`auth-input ${formErrors.phone ? 'is-invalid' : ''}`}
                   disabled={loading}
                 />
               </div>
+              {formErrors.phone && <p className="auth-error-text">{formErrors.phone}</p>}
             </div>
           </div>
 
@@ -163,10 +206,11 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   placeholder="votre@email.com"
-                  className="auth-input"
+                  className={`auth-input ${formErrors.email ? 'is-invalid' : ''}`}
                   disabled={loading}
                 />
               </div>
+              {formErrors.email && <p className="auth-error-text">{formErrors.email}</p>}
             </div>
 
             <div className="auth-form-group">
@@ -182,14 +226,15 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   placeholder="Mot de passe"
-                  className="auth-input"
+                  className={`auth-input ${formErrors.password ? 'is-invalid' : ''}`}
                   disabled={loading}
                 />
               </div>
+              <p className="auth-input-condition">Au moins 6 caractères, une majuscule, une minuscule et un chiffre.</p>
+              {formErrors.password && <p className="auth-error-text">{formErrors.password}</p>}
             </div>
           </div>
 
-          {/* Champs spécifiques au rôle */}
           {formData.role === 'client' && (
             <>
               <div className="auth-form-row">
@@ -206,10 +251,11 @@ const Register = () => {
                       onChange={handleChange}
                       required
                       placeholder="Nom de votre clinique"
-                      className="auth-input"
+                      className={`auth-input ${formErrors.clinicName ? 'is-invalid' : ''}`}
                       disabled={loading}
                     />
                   </div>
+                  {formErrors.clinicName && <p className="auth-error-text">{formErrors.clinicName}</p>}
                 </div>
 
                 <div className="auth-form-group">
@@ -223,7 +269,7 @@ const Register = () => {
                       value={formData.clinicType}
                       onChange={handleChange}
                       required
-                      className="auth-input auth-select"
+                      className={`auth-input auth-select ${formErrors.clinicType ? 'is-invalid' : ''}`}
                       disabled={loading}
                     >
                       <option value="">Choisir le type</option>
@@ -232,6 +278,7 @@ const Register = () => {
                       <option value="medical_office">Cabinet Médical</option>
                     </select>
                   </div>
+                   {formErrors.clinicType && <p className="auth-error-text">{formErrors.clinicType}</p>}
                 </div>
               </div>
 
@@ -249,10 +296,11 @@ const Register = () => {
                     onChange={handleChange}
                     required
                     placeholder="Adresse complète"
-                    className="auth-input"
+                    className={`auth-input ${formErrors.address ? 'is-invalid' : ''}`}
                     disabled={loading}
                   />
                 </div>
+                {formErrors.address && <p className="auth-error-text">{formErrors.address}</p>}
               </div>
             </>
           )}
@@ -271,16 +319,17 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   placeholder="Nom de votre entreprise"
-                  className="auth-input"
+                  className={`auth-input ${formErrors.companyName ? 'is-invalid' : ''}`}
                   disabled={loading}
                 />
               </div>
+              {formErrors.companyName && <p className="auth-error-text">{formErrors.companyName}</p>}
             </div>
           )}
 
           <button 
             type="submit"
-            disabled={loading || !formData.role}
+            disabled={loading}
             className="auth-button auth-button-primary"
           >
             {loading ? (

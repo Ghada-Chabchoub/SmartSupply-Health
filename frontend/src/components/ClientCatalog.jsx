@@ -219,7 +219,7 @@ export default function ClientCatalog({ reload }) {
                       
                       <div className="rec-info">
                         <div className="rec-price-container">
-                          <span className="rec-price">{p.price} DT</span>
+                          <span className="rec-price">{p.price} </span>
                           <span className="rec-stock">Stock: {p.stock}</span>
                         </div>
                       </div>
@@ -276,7 +276,7 @@ export default function ClientCatalog({ reload }) {
               <div className="product-content">
                 <h3 className="product-title">{p.name}</h3>
                 <p className="product-description">{p.description}</p>
-                <p className="product-price">Prix : {p.price} dt</p>
+                <p className="product-price">Prix : {p.price} </p>
                 <p className="product-stock">Stock : {p.stock}</p>
                 <p className="product-category">
                   Catégorie : {p.category || 'Non spécifiée'}
@@ -343,7 +343,7 @@ export default function ClientCatalog({ reload }) {
               )}
               <p className="modal-description"><strong>Description :</strong> {selectedProduct.description}</p>
               <div className="modal-details">
-                <p><strong>Prix :</strong> {selectedProduct.price} dt</p>
+                <p><strong>Prix :</strong> {selectedProduct.price} </p>
                 <p><strong>Stock :</strong> {selectedProduct.stock}</p>
                 <p><strong>Catégorie :</strong> {selectedProduct.category || 'Non spécifiée'}</p>
               </div>

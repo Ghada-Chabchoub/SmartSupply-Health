@@ -35,7 +35,7 @@ const createAndPayAutoOrder = async (clientId) => {
   };
 
   const order = new Order({
-    orderNumber: 'ORD-' + Date.now(),
+    orderNumber: 'CMD' + Date.now(),
     client: validClientId,
     items: orderProducts,
     totalAmount,

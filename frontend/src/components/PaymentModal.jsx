@@ -9,6 +9,34 @@ const CheckoutForm = ({ order, onPaySuccess, onCancel, setErrorMessage }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
+  const [savedCards, setSavedCards] = useState([]);
+  const [selectedCard, setSelectedCard] = useState(''); // Store payment method ID
+  const [isCardFormVisible, setCardFormVisible] = useState(false);
+
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      if (!stripe) return; // Wait for stripe to be available
+      setLoading(true);
+      try {
+        const { data } = await api.get('/payments/payment-methods');
+        setSavedCards(data);
+        if (data.length > 0) {
+          setSelectedCard(data[0].id); // Select the first card by default
+          setCardFormVisible(false);
+        } else {
+          setCardFormVisible(true); // No cards, force show form
+        }
+      } catch (error) {
+        console.error("Failed to fetch saved cards:", error);
+        setErrorMessage("Could not load your saved payment methods.");
+        setCardFormVisible(true); // Show form as a fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPaymentMethods();
+  }, [stripe, setErrorMessage]);
+
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -21,22 +49,32 @@ const CheckoutForm = ({ order, onPaySuccess, onCancel, setErrorMessage }) => {
       return;
     }
 
-    const cardElement = elements.getElement(CardElement);
-
     try {
       // Get client secret from your backend
       const res = await api.post(`/payments/create-payment-intent/${order._id}`);
       const { clientSecret } = res.data;
 
-      // Confirm the card payment
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
+      let paymentMethodPayload;
+      if (selectedCard && !isCardFormVisible) {
+        // Use a saved payment method
+        paymentMethodPayload = selectedCard;
+      } else {
+        // Use the new card from CardElement
+        const cardElement = elements.getElement(CardElement);
+        paymentMethodPayload = {
           card: cardElement,
           billing_details: {
-            // You can collect and add more details here if needed
+            // TODO: Get customer name from context or props
             name: 'Customer Name', 
           },
-        },
+        };
+      }
+
+      // Confirm the card payment
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: paymentMethodPayload,
+        // To save the card if it's a new one
+        ...(typeof paymentMethodPayload === 'object' && { setup_future_usage: 'off_session' }),
       });
 
       if (error) {
@@ -78,8 +116,40 @@ const CheckoutForm = ({ order, onPaySuccess, onCancel, setErrorMessage }) => {
   return (
     <form onSubmit={handleSubmit}>
       <div className="payment-modal-body">
-        <label htmlFor="card-element">Card Details</label>
-        <CardElement id="card-element" options={CARD_ELEMENT_OPTIONS} />
+        {loading && savedCards.length === 0 && <p>Loading saved cards...</p>}
+
+        {!loading && savedCards.length > 0 && !isCardFormVisible && (
+          <div className="saved-card-section">
+            <label htmlFor="saved-card-select">Pay with a saved card</label>
+            <select
+              id="saved-card-select"
+              value={selectedCard}
+              onChange={(e) => setSelectedCard(e.target.value)}
+              className="saved-card-select" // Add some styling for this
+            >
+              {savedCards.map(card => (
+                <option key={card.id} value={card.id}>
+                  {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} ending in {card.last4}
+                </option>
+              ))}
+            </select>
+            <button type="button" className="link-button" onClick={() => { setCardFormVisible(true); setSelectedCard(''); }}>
+              Pay with a new card
+            </button>
+          </div>
+        )}
+
+        {isCardFormVisible && (
+          <div className="new-card-section">
+            <label htmlFor="card-element">Card Details</label>
+            <CardElement id="card-element" options={CARD_ELEMENT_OPTIONS} />
+            {savedCards.length > 0 && (
+              <button type="button" className="link-button" onClick={() => { setCardFormVisible(false); setSelectedCard(savedCards[0].id); }}>
+                Use a saved card
+              </button>
+            )}
+          </div>
+        )}
       </div>
       <div className="payment-modal-footer">
         <button type="button" className="cancel-btn" onClick={onCancel} disabled={loading}>
