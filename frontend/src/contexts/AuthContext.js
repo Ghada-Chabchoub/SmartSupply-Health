@@ -61,6 +61,11 @@ const authReducer = (state, action) => {
         user: action.payload,
         loading: false
       };
+    case 'SET_USER':
+      return {
+        ...state,
+        user: action.payload,
+      };
     case 'CLEAR_ERROR':
       return {
         ...state,
@@ -160,12 +165,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setUser = (userData) => {
+    dispatch({ type: 'SET_USER', payload: userData });
+  };
+
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
 
   const value = {
     ...state,
+    setUser,
     login,
     register,
     logout,

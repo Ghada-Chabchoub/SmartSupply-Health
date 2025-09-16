@@ -70,11 +70,14 @@ export default function ProductForm({ product, onSaved }) {
     switch (name) {
       case 'name':
         if (!value.trim()) return 'Le nom du produit est requis.';
+        if (value.trim().length < 4) return 'Le nom du produit doit contenir au moins 4 caractères.';
         if (!/[a-zA-Z]/.test(value)) return 'Le nom doit contenir des lettres.';
         break;
       case 'description':
-        if (value && !/[a-zA-Z]/.test(value)) return 'La description doit contenir des lettres.';
-        if (value && value.length > 1000) return 'La description ne peut pas dépasser 1000 caractères.';
+        if (!value.trim()) return 'La description est requise.';
+        if (value.trim().length < 10) return 'La description doit contenir au moins 10 caractères.';
+        if (!/[a-zA-Z]/.test(value)) return 'La description doit contenir des lettres.';
+        if (value.length > 1000) return 'La description ne peut pas dépasser 1000 caractères.';
         break;
       case 'price':
         if (String(value).trim() === '') return 'Le prix est requis.';
@@ -179,6 +182,10 @@ export default function ProductForm({ product, onSaved }) {
       if (faq.answer && !/[a-zA-Z]/.test(faq.answer)) errors[`faqs-${index}-answer`] = 'La réponse doit contenir des lettres.';
     });
 
+    if (!product && selectedFiles.length === 0) {
+      errors.images = 'Au moins une image est requise.';
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       setTouched(Object.keys(form).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
@@ -224,7 +231,7 @@ export default function ProductForm({ product, onSaved }) {
           {formErrors.name && touched.name && <p className="error-text">{formErrors.name}</p>}
         </div>
         <div className="form-field">
-          <label className="field-label">Description</label>
+          <label className="field-label">Description *</label>
           <textarea name="description" placeholder="Description détaillée..." value={form.description} onChange={handleChange} onBlur={handleBlur} className={`field-textarea ${formErrors.description && touched.description ? 'is-invalid' : ''}`} />
           {formErrors.description && touched.description && <p className="error-text">{formErrors.description}</p>}
         </div>
@@ -308,11 +315,12 @@ export default function ProductForm({ product, onSaved }) {
           </div>
         </div>
         <div className="form-field">
-          <label className="field-label">Images du produit</label>
+          <label className="field-label">Images du produit *</label>
           <div className="file-input-container">
-            <input type="file" multiple accept="image/*" onChange={handleFileChange} className="file-input" />
+            <input type="file" multiple accept="image/*" onChange={handleFileChange} className={`file-input ${formErrors.images ? 'is-invalid' : ''}`} />
             {selectedFiles.length > 0 && (<div className="file-count">{selectedFiles.length} fichier(s) sélectionné(s)</div>)}
           </div>
+          {formErrors.images && <p className="error-text">{formErrors.images}</p>}
         </div>
 
         <button type="submit" className={`submit-button ${product ? 'edit' : 'create'}`}>{product ? 'Sauvegarder' : 'Créer'}</button>

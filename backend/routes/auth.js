@@ -164,7 +164,7 @@ router.put('/profile', auth, async (req, res) => {
     
     const updateData = { name, phone };
 
-    if (req.role === 'client') {
+    if (req.user.role === 'client') {
       if (clinicName) updateData.clinicName = clinicName;
       if (clinicType) updateData.clinicType = clinicType;
       if (address) updateData.address = address;
@@ -181,7 +181,7 @@ router.put('/profile', auth, async (req, res) => {
         data: { user: updated }
       });
 
-    } else if (req.role === 'supplier') {
+    } else if (req.user.role === 'supplier') {
       if (companyName) updateData.companyName = companyName;
 
       const updated = await Supplier.findByIdAndUpdate(

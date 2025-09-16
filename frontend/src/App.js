@@ -1,7 +1,8 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { CartProvider } from './contexts/CartContext';
-import { NotificationProvider } from './contexts/NotificationContext'; // Importer
+import { NotificationProvider } from './contexts/NotificationContext';
+import { useAuth } from './contexts/AuthContext';
 import Register from './components/auth/Register';
 import SupplierDashboard from './components/dashboard/SupplierDashboard';
 import Login from './components/auth/Login';
@@ -13,15 +14,18 @@ import NewOrder from './components/NewOrder';
 import SupplierOrders from './components/SupplierOrders';
 import SupplierClients from './components/SupplierClients';
 import ClientInventory from './components/ClientInventory';
-import ManagePaymentMethods from './components/ManagePaymentMethods'; // <-- IMPORT
-import Chatbot from './components/chatbot/Chatbot'; // <-- AJOUTER CETTE LIGNE
+import ManagePaymentMethods from './components/ManagePaymentMethods';
+import Chatbot from './components/chatbot/Chatbot';
 import Profile from './components/Profile';
+import SupplierProfile from './components/SupplierProfile';
 import ForgotPassword from './components/auth/ForgotPassword';
 import './App.css';
 
 function App() {
+  const { user } = useAuth();
+
   return (
-    <NotificationProvider> {/* Envelopper avec le NotificationProvider */}
+    <NotificationProvider>
       <CartProvider>
         <div className="app-container">
           <main className="main-content">
@@ -32,7 +36,8 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/client-dashboard" element={<ClientDashboard />} />
               <Route path="/supplier-dashboard" element={<SupplierDashboard />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/profileClient" element={ <Profile />} />
+              <Route path="/profileSupp" element={ <SupplierProfile />} />
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/supplier-dashboard/catalogue" element={<ProductsPage />} />
               <Route path="/client-dashboard/catalog" element={<ClientCatalog />} />
@@ -44,7 +49,7 @@ function App() {
               <Route path="/client-dashboard/payment-methods" element={<ManagePaymentMethods />} />
             </Routes>
           </main>
-          <Chatbot /> {/* <-- AJOUTER CETTE LIGNE */}
+          <Chatbot /> 
         </div>
       </CartProvider>
     </NotificationProvider>

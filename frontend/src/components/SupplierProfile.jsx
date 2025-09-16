@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import ClientNavbar from './dashboard/ClientNavbar';
+import SupplierNavbar from './dashboard/SupplierNavbar';
 import '../style/Profile.css';
 
-const Profile = () => {
+const SupplierProfile = () => {
   const { user, setUser } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    address: '',
-    clinicName: '',
-    clinicType: 'clinic',
+    companyName: '',
     password: '',
     confirmPassword: '',
   });
@@ -36,9 +34,7 @@ const Profile = () => {
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
-        address: user.address || '',
-        clinicName: user.clinicName || '',
-        clinicType: user.clinicType || 'clinic',
+        companyName: user.companyName || '',
         password: '',
         confirmPassword: '',
       });
@@ -59,14 +55,11 @@ const Profile = () => {
       case 'phone':
         if (!/^\d{8}$/.test(value)) error = 'Le numéro de téléphone doit contenir exactement 8 chiffres.';
         break;
-      case 'address':
-        if (value.trim().length < 10) error = "L'adresse doit contenir au moins 10 caractères.";
-        break;
-      case 'clinicName':
+      case 'companyName':
         if (value.trim().length < 4) {
-          error = 'Le nom de la clinique doit contenir au moins 4 caractères.';
+          error = "Le nom de l'entreprise doit contenir au moins 4 caractères.";
         } else if (!/^[a-zA-Z\s]+$/.test(value)) {
-          error = 'Le nom de la clinique ne doit contenir que des lettres et des espaces.';
+          error = "Le nom de l'entreprise ne doit contenir que des lettres et des espaces.";
         }
         break;
       case 'password':
@@ -110,7 +103,7 @@ const Profile = () => {
     const validationErrors = {};
     let hasErrors = false;
     Object.keys(formData).forEach(key => {
-      if (['name', 'phone', 'address', 'clinicName', 'password', 'confirmPassword'].includes(key)) {
+      if (['name', 'phone', 'companyName', 'password', 'confirmPassword'].includes(key)) {
         const error = validateField(key, formData[key], formData);
         if (error) {
           validationErrors[key] = error;
@@ -118,7 +111,7 @@ const Profile = () => {
         }
       }
     });
-
+    
     if (formData.password && formData.password !== formData.confirmPassword) {
         validationErrors.confirmPassword = 'Les mots de passe ne correspondent pas.';
         hasErrors = true;
@@ -143,9 +136,7 @@ const Profile = () => {
       setSuccess('Profil mis à jour avec succès !');
       setErrors({});
       setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
-
     } catch (err) {
-      console.error("Profile update error:", err);
       setError(err.response?.data?.message || 'La mise à jour du profil a échoué.');
     }
   };
@@ -156,20 +147,20 @@ const Profile = () => {
 
   return (
     <>
-      <ClientNavbar />
+      <SupplierNavbar />
       <div className="profile-container">
         <div className="profile-card">
           <div className="profile-header">
             <div className="profile-header-icon">{user?.name?.charAt(0)}</div>
             <div className="profile-header-text">
               <h2 className="profile-title">Gérer votre profil</h2>
-              <p className="profile-subtitle">Mettez à jour vos informations personnelles et celles de votre clinique.</p>
+              <p className="profile-subtitle">Mettez à jour vos informations personnelles et celles de votre entreprise.</p>
             </div>
           </div>
           <form onSubmit={handleSubmit} className="profile-form">
             {error && <div className="auth-error">{error}</div>}
             {success && <div className="auth-success">{success}</div>}
-            
+
             <div className="form-row">
               <div className="form-group">
                 <label>Nom</label>
@@ -189,25 +180,9 @@ const Profile = () => {
                 <div className="error-text">{errors.phone}</div>
               </div>
               <div className="form-group">
-                <label>Adresse</label>
-                <input type="text" name="address" value={formData.address} onChange={handleChange} className={`form-control ${errors.address ? 'is-invalid' : ''}`} />
-                <div className="error-text">{errors.address}</div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Nom de la clinique</label>
-                <input type="text" name="clinicName" value={formData.clinicName} onChange={handleChange} className={`form-control ${errors.clinicName ? 'is-invalid' : ''}`} />
-                <div className="error-text">{errors.clinicName}</div>
-              </div>
-              <div className="form-group">
-                <label>Type de clinique</label>
-                <select name="clinicType" value={formData.clinicType} onChange={handleChange} className="form-control">
-                  <option value="clinic">Clinique</option>
-                  <option value="laboratory">Laboratoire</option>
-                  <option value="medical_office">Cabinet Médical</option>
-                </select>
+                <label>Nom de l'entreprise</label>
+                <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className={`form-control ${errors.companyName ? 'is-invalid' : ''}`} />
+                <div className="error-text">{errors.companyName}</div>
               </div>
             </div>
 
@@ -229,7 +204,7 @@ const Profile = () => {
                 </div>
               </div>
             </div>
-            
+
             <button type="submit" className="profile-button">Mettre à jour le profil</button>
           </form>
         </div>
@@ -238,4 +213,4 @@ const Profile = () => {
   );
 };
 
-export default Profile;
+export default SupplierProfile;

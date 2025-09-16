@@ -23,15 +23,16 @@ const Register = () => {
     switch (name) {
       case 'name':
         if (!value.trim()) return 'Le nom complet est requis.';
+        if (value.trim().length < 4) return 'Le nom complet doit contenir au moins 4 caractères.';
         if (!/^[a-zA-Z\s]+$/.test(value)) return 'Le nom complet ne doit contenir que des lettres.';
         break;
       case 'email':
         if (!value.trim()) return "L'email est requis.";
-        if (!/\S+@\S+\.\S+/.test(value)) return 'L\'email doit inclure un "@".';
+        if (!/\S+@\S+\.\S+/.test(value)) return 'forme de emeil invalide (email@exemple.test)';
         break;
       case 'phone':
         if (!value.trim()) return 'Le téléphone est requis.';
-        if (!/^[0-9]+$/.test(value)) return 'Le téléphone ne doit contenir que des chiffres.';
+        if (!/^\d{8}$/.test(value)) return 'Le téléphone doit contenir exactement 8 chiffres.';
         break;
       case 'password':
         if (!value.trim()) return 'Le mot de passe est requis.';
@@ -39,16 +40,19 @@ const Register = () => {
         break;
       case 'clinicName':
         if (currentData.role === 'client' && !value.trim()) return 'Le nom de la clinique est requis.';
+        if (currentData.role === 'client' && value.trim().length < 4) return 'Le nom de la clinique doit contenir au moins 4 caractères.';
         if (currentData.role === 'client' && value.trim() && !/^[a-zA-Z\s]+$/.test(value)) return 'Le nom de la clinique ne doit contenir que des lettres et des espaces.';
         break;
       case 'address':
         if (currentData.role === 'client' && !value.trim()) return "L'adresse est requise.";
+        if (currentData.role === 'client' && value.trim().length < 10) return "L'adresse doit contenir au moins 10 caractères.";
         break;
       case 'clinicType':
         if (currentData.role === 'client' && !value.trim()) return 'Le type de clinique est requis.';
         break;
       case 'companyName':
         if (currentData.role === 'supplier' && !value.trim()) return "Le nom de l'entreprise est requis.";
+        if (currentData.role === 'supplier' && value.trim() && !/^[a-zA-Z\s]+$/.test(value)) return "Le nom de l'entreprise ne doit contenir que des lettres et des espaces.";
         break;
       default:
         break;

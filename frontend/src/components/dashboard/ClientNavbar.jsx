@@ -19,6 +19,8 @@ const ClientNavbar = () => {
     { name: 'Mes Commandes', path: '/client-dashboard/orders' },
     { name: 'Stock', path: '/client-dashboard/stock' },
     { name: 'Paiements', path: '/client-dashboard/payment-methods' },
+    { name: 'Gestion de profil', path: '/profileClient' },
+
   ];
 
   return (
