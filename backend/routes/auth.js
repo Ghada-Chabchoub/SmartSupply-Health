@@ -160,47 +160,39 @@ router.post('/logout', auth, (req, res) => {
 // @access  Private
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { name, phone, clinicName, clinicType, address, companyName } = req.body;
+    const { role } = req.user;
+    const Model = role === 'client' ? Client : Supplier;
     
-    const updateData = { name, phone };
-
-    if (req.user.role === 'client') {
-      if (clinicName) updateData.clinicName = clinicName;
-      if (clinicType) updateData.clinicType = clinicType;
-      if (address) updateData.address = address;
-
-      const updated = await Client.findByIdAndUpdate(
-        req.user._id,
-        updateData,
-        { new: true, runValidators: true }
-      );
-
-      return res.json({
-        success: true,
-        message: 'Profile updated successfully',
-        data: { user: updated }
-      });
-
-    } else if (req.user.role === 'supplier') {
-      if (companyName) updateData.companyName = companyName;
-
-      const updated = await Supplier.findByIdAndUpdate(
-        req.user._id,
-        updateData,
-        { new: true, runValidators: true }
-      );
-
-      return res.json({
-        success: true,
-        message: 'Profile updated successfully',
-        data: { user: updated }
-      });
+    const user = await Model.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    return res.status(400).json({ success: false, message: 'Invalid role' });
+    // Mettre à jour les champs fournis dans la requête
+    const allowedFields = ['name', 'phone', 'clinicName', 'clinicType', 'address', 'companyName', 'password'];
+    
+    Object.keys(req.body).forEach(key => {
+      // On met à jour le champ seulement s'il est permis et non vide (sauf pour le mot de passe)
+      if (allowedFields.includes(key) && (req.body[key] || key === 'password' && req.body[key])) {
+        user[key] = req.body[key];
+      }
+    });
+
+    // La méthode .save() va déclencher le hook pre('save') qui cryptera le mot de passe si nécessaire
+    const updatedUser = await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: { user: updatedUser }
+    });
 
   } catch (error) {
     console.error('Profile update error:', error);
+    // Gérer les erreurs de validation (ex: email déjà pris si on permettait de le changer)
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     res.status(500).json({
       success: false,
       message: 'Server error during profile update'

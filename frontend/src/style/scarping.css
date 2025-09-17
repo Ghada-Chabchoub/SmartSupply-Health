@@ -67,3 +67,19 @@
   color: #27ae60;
   font-weight: bold;
 }
+
+/* Style pour le conteneur du loader */
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  min-height: 150px; /* Hauteur minimale pour centrer correctement */
+}
+
+.loader-container p {
+  margin-top: 15px;
+  font-size: 1.1em;
+  color: #555;
+}

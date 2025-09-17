@@ -139,6 +139,18 @@ exports.updateOrderStatus = async (req, res) => {
         if (order.status === 'delivered' || order.status === 'cancelled') {
             return res.status(400).json({ message: 'Cannot change status of a delivered or cancelled order.' });
         }
+
+        // --- LOGIQUE DE RESTOCKAGE LORS DE L'ANNULATION ---
+        // Si le nouveau statut est "annulé" et que l'ancien statut était un statut où le stock était réservé
+        if (status === 'cancelled' && ['confirmed', 'processing'].includes(order.status)) {
+            for (const item of order.items) {
+                // On remet la quantité commandée dans le stock du produit
+                await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
+                console.log(`Stock pour le produit ${item.product._id} réapprovisionné de ${item.quantity}.`);
+            }
+        }
+        // --- FIN DE LA LOGIQUE DE RESTOCKAGE ---
+
         order.status = status;
         await order.save();
         if (status === 'delivered') {

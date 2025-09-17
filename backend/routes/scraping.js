@@ -5,6 +5,7 @@ const CompetitorOffer = require('../models/CompetitorOffer');
 const Product = require('../models/Product');
 
 // [POST] /api/scrape/:productId
+// [POST] /api/scrape/:productId
 router.post('/scrape/:productId', async (req, res) => {
   try {
     const product = await Product.findById(req.params.productId);

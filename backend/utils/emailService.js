@@ -1,41 +1,49 @@
-require('dotenv').config(); 
-const nodemailer = require('nodemailer');
+require('dotenv').config();
+const sgMail = require('@sendgrid/mail');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: process.env.EMAIL_SECURE === 'true', 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  dnsTimeout: 10000, // 10 seconds
-  connectionTimeout: 10000, // 10 seconds
-  socketTimeout: 10000, // 10 seconds
-  dns: {
-    family: 4, // Force IPv4 resolution
-  },
-});
+// --- CONFIGURATION DE SENDGRID ---
+// On configure la clé API une seule fois au démarrage de l'application.
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
+console.log("--- Service d'email configuré avec SendGrid ---");
+console.log(`Email d'expédition par défaut: ${process.env.EMAIL_FROM}`);
+console.log(`Clé API SendGrid définie: ${!!process.env.SENDGRID_API_KEY}`);
+console.log("-------------------------------------------");
+
+/**
+ * Envoie un email en utilisant l'API de SendGrid.
+ * @param {string} to - L'adresse email du destinataire.
+ * @param {string} subject - Le sujet de l'email.
+ * @param {string} html - Le contenu HTML de l'email.
+ */
 const sendEmail = async (to, subject, html) => {
+  // On vérifie si la clé API et l'expéditeur sont bien configurés.
+  if (!process.env.SENDGRID_API_KEY || !process.env.EMAIL_FROM) {
+    console.error("Erreur: SENDGRID_API_KEY ou EMAIL_FROM n'est pas défini dans le fichier .env");
+    // On ne lance pas d'erreur pour ne pas crasher le serveur, mais on log le problème.
+    return;
+  }
+
+  const msg = {
+    to: to,
+    from: {
+      email: process.env.EMAIL_FROM,
+      name: 'SmartSupply Health' // Vous pouvez personnaliser le nom de l'expéditeur ici
+    },
+    subject: subject,
+    html: html,
+  };
+
   try {
-    const info = await transporter.sendMail({
-      from: `"SmartSupply Health" <${process.env.EMAIL_FROM || 'noreply@smartsupply.com'}>`,
-      to,
-      subject,
-      html,
-    });
-
-    // Log a success message
-    console.log('Message sent: %s', info.messageId);
-
-    // If using Ethereal, log the preview URL
-    if (process.env.EMAIL_HOST && process.env.EMAIL_HOST.includes('ethereal.email')) {
-      console.log('📫 Preview URL for test email: %s', nodemailer.getTestMessageUrl(info));
-    }
-    
+    await sgMail.send(msg);
+    console.log(`Email envoyé avec succès à ${to} avec le sujet "${subject}"`);
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error("Erreur détaillée lors de l'envoi de l'email via SendGrid:", error);
+
+    // SendGrid envoie souvent des détails utiles dans la réponse de l'erreur.
+    if (error.response) {
+      console.error("Détails de l'erreur SendGrid:", error.response.body);
+    }
   }
 };
 

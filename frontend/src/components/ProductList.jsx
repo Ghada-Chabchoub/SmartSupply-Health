@@ -20,9 +20,41 @@ export default function ProductList({ onEdit, reload }) {
   const [offers, setOffers] = useState([]);
   const [showSimulationModal, setShowSimulationModal] = useState(false);
   const [simulationData, setSimulationData] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzingProductId, setAnalyzingProductId] = useState(null);
+  const [competitorError, setCompetitorError] = useState(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationError, setSimulationError] = useState(null);
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const dropdownRef = useRef(null);
   const { showNotification } = useContext(NotificationContext);
+
+  // --- EFFET POUR LANCER L'ANALYSE DES CONCURRENTS ---
+  useEffect(() => {
+    if (!analyzingProductId) return;
+
+    const fetchCompetitors = async () => {
+      setCompetitorError(null);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.post(`http://localhost:5000/api/scrape/${analyzingProductId}`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setOffers(res.data.offers || []);
+      } catch (err) {
+        const errorMsg = err.response?.data?.message || 'Une erreur est survenue.';
+        setCompetitorError(errorMsg);
+        showNotification(`Erreur d'analyse: ${errorMsg}`, 'error');
+        setOffers([]);
+      } finally {
+        setIsAnalyzing(false);
+        setAnalyzingProductId(null);
+      }
+    };
+
+    fetchCompetitors();
+  }, [analyzingProductId, showNotification]);
+
 
   // Fetch categories
   useEffect(() => {
@@ -42,7 +74,7 @@ export default function ProductList({ onEdit, reload }) {
       }
     };
     fetchCategories();
-  }, []);
+  }, [showNotification]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -107,38 +139,34 @@ export default function ProductList({ onEdit, reload }) {
     }
   };
 
-  const analyzeCompetitors = async (productId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(`http://localhost:5000/api/scrape/${productId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setOffers(res.data.offers || []);
-      setShowCompetitorModal(true);
-    } catch (err) {
-      console.error('Erreur analyse concurrence:', err.message);
-      showNotification(`Erreur lors de l’analyse concurrentielle: ${err.response?.data?.message || 'Une erreur est survenue.'}`, 'error');
-    }
+  const analyzeCompetitors = (productId) => {
+    setOffers([]);
+    setIsAnalyzing(true);
+    setCompetitorError(null);
+    setShowCompetitorModal(true);
+    setAnalyzingProductId(productId);
   };
 
   const simulatePrice = async (productId) => {
+    setIsSimulating(true);
+    setSimulationError(null);
+    setSimulationData(null);
+    setShowSimulationModal(true);
     try {
       const token = localStorage.getItem('token');
-      // First, trigger the scraping process to gather data
       await axios.post(`http://localhost:5000/api/scrape/${productId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      // Then, perform the simulation
       const res = await axios.get(`http://localhost:5000/api/simulate/${productId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSimulationData(res.data);
-      setShowSimulationModal(true);
     } catch (err) {
-      console.error('Erreur simulation:', err.response?.data?.message || err.message);
-      // Affiche l'erreur spécifique du backend, ou un message générique
-      showNotification(`Erreur lors de la simulation du prix : ${err.response?.data?.message || 'Une erreur est survenue.'}`, 'error');
+      const errorMsg = err.response?.data?.message || 'Une erreur est survenue.';
+      setSimulationError(errorMsg);
+      showNotification(`Erreur de simulation: ${errorMsg}`, 'error');
+    } finally {
+      setIsSimulating(false);
     }
   };
 
@@ -191,7 +219,7 @@ export default function ProductList({ onEdit, reload }) {
               <h3 className="product-title">{p.name}</h3>
               <p className="product-description">{p.description}</p>
               <p className="product-price">
-                Prix : {p.price} dt
+                Prix : {p.price} €
               </p>
               <p className="product-stock">
                 Stock : {p.stock}
@@ -280,12 +308,16 @@ export default function ProductList({ onEdit, reload }) {
         open={showCompetitorModal}
         onClose={() => setShowCompetitorModal(false)}
         offers={offers}
+        isLoading={isAnalyzing}
+        error={competitorError}
       />
 
       <PriceSimulationModal
         open={showSimulationModal}
         onClose={() => setShowSimulationModal(false)}
         data={simulationData}
+        isLoading={isSimulating}
+        error={simulationError}
       />
     </div>
   );
