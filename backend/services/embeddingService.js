@@ -42,7 +42,7 @@ const upsertProductEmbedding = async (product) => {
   if (!product?._id) return console.error('Embedding Service: Invalid product for upsert.');
   
   try {
-    console.log(`⚡ Embedding Service: Upserting product ID: ${product._id}`);
+    console.log(` Embedding Service: Upserting product ID: ${product._id}`);
     const collection = await chromaClient.getOrCreateCollection({ name: CHROMA_COLLECTION_NAME });
     const document = formatProductForEmbedding(product);
     const metadata = { name: product.name, category: product.category, price: String(product.price) };
@@ -56,9 +56,9 @@ const upsertProductEmbedding = async (product) => {
       metadatas: [metadata],
       documents: [document],
     });
-    console.log(`✅ Embedding Service: Product ID: ${id} processed successfully.`);
+    console.log(` Embedding Service: Product ID: ${id} processed successfully.`);
   } catch (error) {
-    console.error(`❌ Embedding Service: Error upserting product ID: ${product._id}`, error);
+    console.error(` Embedding Service: Error upserting product ID: ${product._id}`, error);
   }
 };
 
@@ -71,14 +71,14 @@ const deleteProductEmbedding = async (productId) => {
   
   try {
     const idStr = String(productId);
-    console.log(`🗑️ Embedding Service: Deleting product ID: ${idStr}`);
+    console.log(` Embedding Service: Deleting product ID: ${idStr}`);
     const collection = await chromaClient.getCollection({ name: CHROMA_COLLECTION_NAME });
     await collection.delete({ ids: [idStr] });
-    console.log(`✅ Embedding Service: Product ID: ${idStr} deleted successfully.`);
+    console.log(`Embedding Service: Product ID: ${idStr} deleted successfully.`);
   } catch (error) {
     // It's okay if the item doesn't exist. Don't log an error for that.
     if (!error.message.includes("doesn't exist")) {
-      console.error(`❌ Embedding Service: Error deleting product ID: ${productId}`, error);
+      console.error(` Embedding Service: Error deleting product ID: ${productId}`, error);
     }
   }
 };
@@ -93,8 +93,15 @@ const performFullReEmbedding = async () => {
     const products = await Product.find({}).lean();
     if (!products.length) return console.log('⚠️ No active products to embed.');
 
-    console.log(`🗑️ Deleting old Chroma collection: "${CHROMA_COLLECTION_NAME}"...`);
-    await chromaClient.deleteCollection({ name: CHROMA_COLLECTION_NAME });
+    console.log(`🗑️ Resetting Chroma collection: "${CHROMA_COLLECTION_NAME}"...`);
+    try {
+      await chromaClient.deleteCollection({ name: CHROMA_COLLECTION_NAME });
+    } catch (error) {
+      // Ignore error if collection doesn't exist
+      if (!error.message.includes("could not be found")) {
+        throw error;
+      }
+    }
     const collection = await chromaClient.createCollection({ name: CHROMA_COLLECTION_NAME });
     
     const documents = products.map(formatProductForEmbedding);

@@ -5,6 +5,8 @@ import '../style/ProductList.css';
 import CompetitorModal from './CompetitorModal';
 import PriceSimulationModal from './PriceSimulationModal';
 import { FaEdit, FaBoxOpen, FaTrash, FaSearch, FaChartLine, FaBalanceScale } from 'react-icons/fa';
+import { NotificationContext } from '../contexts/NotificationContext';
+import { useContext } from 'react';
 
 export default function ProductList({ onEdit, reload }) {
   const [products, setProducts] = useState([]);
@@ -20,6 +22,7 @@ export default function ProductList({ onEdit, reload }) {
   const [simulationData, setSimulationData] = useState(null);
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const dropdownRef = useRef(null);
+  const { showNotification } = useContext(NotificationContext);
 
   // Fetch categories
   useEffect(() => {
@@ -35,7 +38,7 @@ export default function ProductList({ onEdit, reload }) {
         setCategories(res.data);
       } catch (err) {
         console.error('Error fetching categories:', err.response?.data?.message || err.message);
-        alert(`Erreur chargement catégories: ${err.response?.data?.message || 'Vérifiez votre connexion ou authentification'}`);
+        showNotification(`Erreur chargement catégories: ${err.response?.data?.message || 'Vérifiez votre connexion ou authentification'}`, 'error');
       }
     };
     fetchCategories();
@@ -55,9 +58,9 @@ export default function ProductList({ onEdit, reload }) {
       setPages(res.data.pages || 1);
     } catch (err) {
       console.error('Error fetching products:', err.response?.data?.message || err.message);
-      alert(`Erreur chargement produits: ${err.response?.data?.message || 'Vérifiez votre connexion ou authentification'}`);
+      showNotification(`Erreur chargement produits: ${err.response?.data?.message || 'Vérifiez votre connexion ou authentification'}`, 'error');
     }
-  }, [q, category, page]);
+  }, [q, category, page, showNotification]);
 
   useEffect(() => {
     fetchProducts();
@@ -96,10 +99,11 @@ export default function ProductList({ onEdit, reload }) {
       await axios.delete(`http://localhost:5000/api/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      showNotification('Produit supprimé avec succès.', 'success');
       fetchProducts();
     } catch (err) {
       console.error('Error deleting product:', err.response?.data?.message || err.message);
-      alert(`Erreur suppression produit: ${err.response?.data?.message || 'Vérifiez votre connexion ou authentification'}`);
+      showNotification(`Erreur suppression produit: ${err.response?.data?.message || 'Vérifiez votre connexion ou authentification'}`, 'error');
     }
   };
 
@@ -113,7 +117,7 @@ export default function ProductList({ onEdit, reload }) {
       setShowCompetitorModal(true);
     } catch (err) {
       console.error('Erreur analyse concurrence:', err.message);
-      alert('Erreur lors de l’analyse concurrentielle.');
+      showNotification(`Erreur lors de l’analyse concurrentielle: ${err.response?.data?.message || 'Une erreur est survenue.'}`, 'error');
     }
   };
 
@@ -132,8 +136,9 @@ export default function ProductList({ onEdit, reload }) {
       setSimulationData(res.data);
       setShowSimulationModal(true);
     } catch (err) {
-      console.error('Erreur simulation:', err.message);
-      alert('Erreur lors de la simulation du prix.');
+      console.error('Erreur simulation:', err.response?.data?.message || err.message);
+      // Affiche l'erreur spécifique du backend, ou un message générique
+      showNotification(`Erreur lors de la simulation du prix : ${err.response?.data?.message || 'Une erreur est survenue.'}`, 'error');
     }
   };
 

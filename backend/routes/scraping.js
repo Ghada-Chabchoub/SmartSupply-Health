@@ -8,7 +8,14 @@ const Product = require('../models/Product');
 router.post('/scrape/:productId', async (req, res) => {
   try {
     const product = await Product.findById(req.params.productId);
-    if (!product) return res.status(404).json({ message: 'Produit non trouvé' });
+    if (!product) {
+      return res.status(404).json({ message: 'Produit non trouvé' });
+    }
+
+    // Validation: Assurer que le nom et la description existent
+    if (!product.name || !product.description) {
+      return res.status(400).json({ message: 'Le nom ou la description du produit est manquant, impossible de lancer la recherche.' });
+    }
 
     const query = `${product.name} ${product.description} prix`;
     const results = await searchGoogle(query);
